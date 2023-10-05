@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Context, Result};
-use reqwest::Client;
+use reqwest::{header::HeaderMap, Client};
 use serde::Deserialize;
 
 #[allow(dead_code)]
@@ -23,6 +23,14 @@ struct GetInstancesResponseBody {
 struct Meta {
     #[serde(rename = "containerInstanceId")]
     container_instance_id: String,
+}
+
+fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<&str> {
+    headers
+        .get("maconomy-concurrency-control")
+        .map(|c| c.to_str().ok())
+        .flatten()
+        .ok_or(anyhow!("Failed to extract concurrency control"))
 }
 
 impl TimeRegistrationRepository {
@@ -97,14 +105,7 @@ impl TimeRegistrationRepository {
             bail!("Server responded with {status}");
         }
 
-        let concurrency_control = response
-            .headers()
-            .get("maconomy-concurrency-control")
-            .map(|c| c.to_str().ok())
-            .flatten()
-            .ok_or(anyhow!("Failed concurrency control"))
-            .map(|c| c.to_string())?;
-
+        let concurrency_control = concurrency_control_from_headers(response.headers())?.to_string();
         let container_instance_id = response
             .json::<GetInstancesResponseBody>()
             .await
@@ -116,5 +117,51 @@ impl TimeRegistrationRepository {
         self.container_instance_id = Some(container_instance_id);
 
         Ok(())
+    }
+
+    pub async fn get_table_rows(&mut self) -> Result<()> {
+        let (url, company) = (self.url.clone(), self.company_name.clone());
+
+        if self.container_instance_id.is_none() || self.concurrency_control.is_none() {
+            println!("Fetching container instance ID...");
+            self.get_container_instance_id()
+                .await
+                .context("Failed to get container instance ID")?;
+        }
+
+        let container_instance_id = self
+            .container_instance_id
+            .as_ref()
+            .expect("Missing container instance ID");
+        let concurrency_control = self
+            .concurrency_control
+            .as_ref()
+            .expect("Missing concurrency control");
+
+        let url = format!("{url}/containers/{company}/timeregistration/instances/{container_instance_id}/data;any");
+        println!("url = {:#?}", url);
+        let cookie = self
+            .authorization_cookie
+            .as_ref()
+            .ok_or(anyhow!("Not logged in"))?;
+        let authorization = format!("X-Cookie {cookie}");
+
+        let response = self
+            .client
+            .post(url)
+            .header("Authorization", authorization)
+            .header("Maconomy-Concurrency-Control", concurrency_control)
+            .send()
+            .await
+            .context("Failed to send request")?;
+
+        let status = &response.status();
+        println!("response.text().await = {:#?}", response.text().await);
+        println!("status = {:#?}", status);
+        if !status.is_success() {
+            bail!("Server responded with {status}");
+        }
+
+        bail!("")
     }
 }

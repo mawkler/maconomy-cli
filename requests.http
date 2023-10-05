@@ -33,10 +33,9 @@ Content-Type: application/json
 # Get all table rows
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data;any
 Authorization: X-Cookie {{cookie}}
+Maconomy-Concurrency-Control: {{concurrency_control}}
 
 -b cookies
-
-{}
 
 # Set data
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/0
