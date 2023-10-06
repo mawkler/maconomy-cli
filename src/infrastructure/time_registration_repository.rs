@@ -2,13 +2,15 @@ use anyhow::{anyhow, bail, Context, Result};
 use reqwest::{header::HeaderMap, Client};
 use serde::Deserialize;
 
+use super::time_registration::Meta;
+use crate::infrastructure::time_registration::TimeRegistration;
+
 #[allow(dead_code)]
 
 pub struct TimeRegistrationRepository {
     client: Client,
     url: String,
     company_name: String,
-    cookies_path: String,
     authorization_cookie: Option<String>,
     concurrency_control: Option<String>,
     container_instance_id: Option<String>,
@@ -17,12 +19,6 @@ pub struct TimeRegistrationRepository {
 #[derive(Deserialize)]
 struct GetInstancesResponseBody {
     meta: Meta,
-}
-
-#[derive(Deserialize)]
-struct Meta {
-    #[serde(rename = "containerInstanceId")]
-    container_instance_id: String,
 }
 
 fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<&str> {
@@ -34,7 +30,7 @@ fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<&str> {
 }
 
 impl TimeRegistrationRepository {
-    pub fn new(url: String, company_name: String, cookies_path: String) -> Result<Self> {
+    pub fn new(url: String, company_name: String) -> Result<Self> {
         let client = reqwest::Client::builder()
             .cookie_store(true)
             .build()
@@ -43,7 +39,6 @@ impl TimeRegistrationRepository {
         Ok(Self {
             url,
             company_name,
-            cookies_path,
             client,
             authorization_cookie: None,
             concurrency_control: None,
@@ -115,11 +110,10 @@ impl TimeRegistrationRepository {
 
         self.concurrency_control = Some(concurrency_control);
         self.container_instance_id = Some(container_instance_id);
-
         Ok(())
     }
 
-    pub async fn get_table_rows(&mut self) -> Result<()> {
+    pub async fn get_time_registration(&mut self) -> Result<TimeRegistration> {
         let (url, company) = (self.url.clone(), self.company_name.clone());
 
         if self.container_instance_id.is_none() || self.concurrency_control.is_none() {
@@ -139,7 +133,6 @@ impl TimeRegistrationRepository {
             .expect("Missing concurrency control");
 
         let url = format!("{url}/containers/{company}/timeregistration/instances/{container_instance_id}/data;any");
-        println!("url = {:#?}", url);
         let cookie = self
             .authorization_cookie
             .as_ref()
@@ -156,12 +149,12 @@ impl TimeRegistrationRepository {
             .context("Failed to send request")?;
 
         let status = &response.status();
-        println!("response.text().await = {:#?}", response.text().await);
-        println!("status = {:#?}", status);
+
         if !status.is_success() {
             bail!("Server responded with {status}");
         }
 
-        bail!("")
+        let time_registration = response.json().await.context("Failed to parse response")?;
+        Ok(time_registration)
     }
 }
