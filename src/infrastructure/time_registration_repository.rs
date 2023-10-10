@@ -76,6 +76,10 @@ impl TimeRegistrationRepository {
         Ok(())
     }
 
+    pub fn logged_in(&self) -> bool {
+        self.authorization_cookie.is_some()
+    }
+
     pub async fn get_container_instance_id(&mut self) -> Result<()> {
         let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances");
@@ -149,7 +153,6 @@ impl TimeRegistrationRepository {
             .context("Failed to send request")?;
 
         let status = &response.status();
-
         if !status.is_success() {
             bail!("Server responded with {status}");
         }
