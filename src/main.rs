@@ -1,5 +1,5 @@
 use crate::{
-    cli::arguments::parse_arguments, cli::arguments::Commands::*,
+    cli::arguments::parse_arguments, cli::arguments::Command::*,
     infrastructure::time_registration_repository::TimeRegistrationRepository,
 };
 use anyhow::{Ok, Result};

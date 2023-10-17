@@ -69,8 +69,8 @@ impl TimeRegistrationRepository {
             .get("maconomy-cookie")
             .map(|c| c.to_str().ok())
             .flatten()
-            .ok_or(anyhow!("Failed to get authentication cookie"))
-            .map(|c| c.to_string())?;
+            .ok_or(anyhow!("Failed to get authentication cookie"))?
+            .to_string();
 
         self.authorization_cookie = Some(cookie);
         Ok(())
@@ -118,8 +118,6 @@ impl TimeRegistrationRepository {
     }
 
     pub async fn get_time_registration(&mut self) -> Result<TimeRegistration> {
-        let (url, company) = (self.url.clone(), self.company_name.clone());
-
         if self.container_instance_id.is_none() || self.concurrency_control.is_none() {
             println!("Fetching container instance ID...");
             self.get_container_instance_id()
@@ -136,6 +134,7 @@ impl TimeRegistrationRepository {
             .as_ref()
             .expect("Missing concurrency control");
 
+        let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances/{container_instance_id}/data;any");
         let cookie = self
             .authorization_cookie

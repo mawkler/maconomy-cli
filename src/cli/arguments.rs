@@ -40,9 +40,9 @@ pub enum Command {
 #[command(author, version, about, long_about = None, arg_required_else_help = true)]
 pub struct Args {
     #[command(subcommand)]
-    pub commands: Command,
+    pub command: Command,
 }
 
 pub fn parse_arguments() -> Command {
-    Args::parse().commands
+    Args::parse().command
 }
