@@ -1,4 +1,7 @@
 use anyhow::{anyhow, bail, Context, Result};
+use oauth2::{
+    basic::BasicClient, AuthUrl, ClientId, CsrfToken, PkceCodeChallenge, RedirectUrl, Scope,
+};
 use reqwest::{header::HeaderMap, Client};
 use serde::Deserialize;
 
@@ -73,6 +76,38 @@ impl TimeRegistrationRepository {
             .to_string();
 
         self.authorization_cookie = Some(cookie);
+        Ok(())
+    }
+
+    pub async fn login_sso(
+        &mut self,
+        auth_url: String,
+        client_id: String,
+        tenant_id: String,
+    ) -> Result<()> {
+        // Create an OAuth2 client
+        let client = BasicClient::new(
+            ClientId::new(client_id),
+            None,
+            AuthUrl::new(auth_url)?,
+            None,
+        )
+        .set_redirect_uri(RedirectUrl::new("http://localhost".to_string())?);
+
+        // Generate a PKCE challenge.
+        let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+
+        // Generate the full authorization URL.
+        let (auth_url, csrf_token) = client
+            .authorize_url(CsrfToken::new_random)
+            // Set the desired scopes.
+            // .add_scope(Scope::new("read".to_string())) // TODO: I don't think I need any scope?
+            // .add_scope(Scope::new("write".to_string()))
+            .add_scope(Scope::new("openid".to_string()))
+            // Set the PKCE code challenge.
+            .set_pkce_challenge(pkce_challenge)
+            .url();
+
         Ok(())
     }
 

@@ -12,7 +12,11 @@ Configuration is done either in `./config.toml` or by creating a system variable
 maconomy_url = "Base URL"
 company = "Company name"
 
-[login]
+[authentication.sso]
+auth_url = "SSO authentication URL"
+client_id = "Client ID"
+
+[authentication.basic]
 username = "username"
 password = "password"
 ```
