@@ -11,12 +11,17 @@ mod infrastructure;
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = Configuration::new();
-    let url = config.get_value("url")?;
+    let url = config.get_value("maconomy_url")?;
     let company_name = config.get_value("company")?;
+    let auth_url = config.get_value("authentication.sso.url")?;
+    let client_id = config.get_value("authentication.sso.client_id")?;
+    let tenant_id = config.get_value("authentication.sso.tenant_id")?;
+
     let mut repository = TimeRegistrationRepository::new(url, company_name).unwrap();
 
-    let arguments = parse_arguments();
-    println!("arguments = {:#?}", arguments);
+    // let arguments = parse_arguments();
+
+    let _ = repository.login_sso(auth_url, client_id, tenant_id).await;
 
     // match arguments {
     //     Login {
@@ -32,13 +37,13 @@ async fn main() -> Result<()> {
     //     } => todo!(),
     // };
 
-    let username = config.get_value("username")?;
-    let password = config.get_value("password")?;
+    // let username = config.get_value("username")?;
+    // let password = config.get_value("password")?;
 
-    repository.login(username, password).await?;
-    repository.get_container_instance_id().await?;
-    let response = repository.get_time_registration().await?;
+    // repository.login(username, password).await?;
+    // repository.get_container_instance_id().await?;
+    // let response = repository.get_time_registration().await?;
 
-    println!("response = {:#?}", response);
+    // println!("response = {:#?}", response);
     Ok(())
 }
