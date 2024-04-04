@@ -24,8 +24,7 @@ struct GetInstancesResponseBody {
 fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<&str> {
     headers
         .get("maconomy-concurrency-control")
-        .map(|c| c.to_str().ok())
-        .flatten()
+        .and_then(|c| c.to_str().ok())
         .ok_or(anyhow!("Failed to extract concurrency control"))
 }
 
@@ -67,8 +66,7 @@ impl TimeRegistrationRepository {
         let cookie = response
             .headers()
             .get("maconomy-cookie")
-            .map(|c| c.to_str().ok())
-            .flatten()
+            .and_then(|c| c.to_str().ok())
             .ok_or(anyhow!("Failed to get authentication cookie"))?
             .to_string();
 

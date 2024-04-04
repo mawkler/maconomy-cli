@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "Maconomy command-line interface"
 
+[lints.rust]
+dead_code = "allow"
+unused_variables = "allow"
+
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.4.6", features = ["derive"] }
