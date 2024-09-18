@@ -2,26 +2,36 @@ use crate::{
     cli::arguments::parse_arguments, cli::arguments::Command::*, config::Configuration,
     infrastructure::time_registration_repository::TimeRegistrationRepository,
 };
-use anyhow::{Ok, Result};
+use anyhow::{Context, Ok, Result};
+use login::open_login_webpage;
+use tao::{
+    event::WindowEvent,
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
+use wry::WebViewBuilder;
 
 mod cli;
 mod config;
 mod infrastructure;
+mod login;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config = Configuration::new();
-    let url = config.get_value("maconomy_url")?;
-    let company_name = config.get_value("company")?;
-    let auth_url = config.get_value("authentication.sso.url")?;
-    let client_id = config.get_value("authentication.sso.client_id")?;
-    let tenant_id = config.get_value("authentication.sso.tenant_id")?;
+    // let config = Configuration::new();
+    // let url = config.get_value("maconomy_url")?;
+    // let company_name = config.get_value("company")?;
+    // let auth_url = config.get_value("authentication.sso.url")?;
+    // let client_id = config.get_value("authentication.sso.client_id")?;
+    // let tenant_id = config.get_value("authentication.sso.tenant_id")?;
 
-    let mut repository = TimeRegistrationRepository::new(url, company_name).unwrap();
+    // let mut repository = TimeRegistrationRepository::new(url, company_name).unwrap();
 
     // let arguments = parse_arguments();
 
-    let _ = repository.login_sso(auth_url, client_id, tenant_id).await;
+    open_login_webpage()?;
+
+    // let _ = repository.login_sso(auth_url, client_id, tenant_id).await;
 
     // match arguments {
     //     Login {
