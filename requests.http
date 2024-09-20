@@ -1,49 +1,36 @@
-# Set these
-@base_url = base_url
-@company = company
+@company = your_company_name
+@company = your_base_url
+
+# @prompt username
+# @prompt password
 
 # Authentication
 GET {{base_url}}/auth/{{company}}
-Authorization: Basic <username>:<password>
+Authorization: Basic {{username}}:{{password}}
 Maconomy-Authentication: X-Cookie
 
--c cookies
+###
 
-# Use cookie name from request above
-@cookie = cookie
+@cookie = cookie_name
 
 # Get instances
 POST {{base_url}}/containers/{{company}}/timeregistration/instances
 Authorization: X-Cookie {{cookie}}
-Content-Type: application/json
-
--b cookies
+Content-Type: application/vnd.deltek.maconomy.containers+json
 
 {"panes": {}}
 
-{%
-  local body = context.json_decode(context.result.body)
-  vim.print(context.result)
-  context.set_env("container_instance_id", body.meta.containerInstanceId)
-%}
-
-# Use the concurrency control from request above's header
-@concurrency_control = concurrency_control
+###
 
 # Get all table rows
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data;any
 Authorization: X-Cookie {{cookie}}
 Maconomy-Concurrency-Control: {{concurrency_control}}
 
--b cookies
+###
 
 # Set data
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/0
 Authorization: X-Cookie {{cookie}}
 Maconomy-Concurrency-Control: {{concurrency_control}}
 Content-Type: application/json
-
--b cookies
-
-{ "data": { "numberday1": 1 } }
-
