@@ -11,12 +11,14 @@ Maconomy-Authentication: X-Cookie
 
 ###
 
-@cookie = cookie_name
+@cookie_name = put_cookie_name_here
+@cookie_value = put_cookie_value_here
 
 # Get instances
 POST {{base_url}}/containers/{{company}}/timeregistration/instances
-Authorization: X-Cookie {{cookie}}
+Authorization: X-Cookie {{cookie_name}}
 Content-Type: application/vnd.deltek.maconomy.containers+json
+Cookie: {{cookie_name}}={{cookie_value}}
 
 {"panes": {}}
 
@@ -24,13 +26,13 @@ Content-Type: application/vnd.deltek.maconomy.containers+json
 
 # Get all table rows
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data;any
-Authorization: X-Cookie {{cookie}}
+Authorization: X-Cookie {{cookie_name}}
 Maconomy-Concurrency-Control: {{concurrency_control}}
 
 ###
 
 # Set data
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/0
-Authorization: X-Cookie {{cookie}}
+Authorization: X-Cookie {{cookie_name}}
 Maconomy-Concurrency-Control: {{concurrency_control}}
 Content-Type: application/json
