@@ -1,12 +1,13 @@
+use crate::config::Configuration;
 use ::futures::StreamExt;
 use anyhow::{anyhow, bail, Context, Result};
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::network::Cookie;
 use chromiumoxide::page::Page;
 use serde::Deserialize;
+use std::fmt::Display;
 use std::{fs::File, io::Write, time::Duration};
 
-const SSO_LOGIN_URL: &str = "<SSO LOGIN URL>"; // Replace with your SSO login URL
 const COOKIE_NAME_PREFIX: &str = "Maconomy-";
 const COOKIE_FILE_NAME: &str = "maconomy_cookie";
 const TIMEOUT: Duration = Duration::from_secs(300);
@@ -27,56 +28,78 @@ impl From<Cookie> for AuthCookie {
     }
 }
 
+impl Display for AuthCookie {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}={}", self.name, self.value)
+    }
+}
+
 pub(crate) struct AuthService {
+    config: Configuration,
     auth_cookie: Option<AuthCookie>,
 }
 
 impl AuthService {
-    pub(crate) fn new() -> Self {
-        Self { auth_cookie: None }
+    pub(crate) fn new(config: Configuration) -> Self {
+        Self {
+            config,
+            auth_cookie: None,
+        }
     }
 
     pub(crate) async fn authenticate(&self) -> Result<AuthCookie> {
         if let Some(cookie) = &self.auth_cookie {
+            println!("Service has cookie");
             return Ok(cookie.clone());
         }
 
-        let cookie = open_browser_and_authenticate().await?;
+        if let Some(cookie) = read_cookie_from_file()? {
+            println!("Found cookie in file");
+            return Ok(cookie.clone());
+        }
+
+        println!("Cookie not found, opening browser");
+        self.reauthenticate().await
+    }
+
+    pub(crate) async fn reauthenticate(&self) -> Result<AuthCookie> {
+        let cookie = self.open_browser_and_authenticate().await?;
 
         write_cookie_to_file(&cookie)?;
 
         Ok(cookie.into())
     }
-}
 
-async fn open_browser_and_authenticate() -> Result<Cookie> {
-    let config = BrowserConfig::builder()
-        .with_head()
-        .build()
-        .map_err(|err| anyhow!("Failed to create browser config: {err}"))?;
-    let (mut browser, mut handler) = Browser::launch(config)
-        .await
-        .context("Failed to launch web browser")?;
+    async fn open_browser_and_authenticate(&self) -> Result<Cookie> {
+        let config = BrowserConfig::builder()
+            .with_head()
+            .build()
+            .map_err(|err| anyhow!("Failed to create browser config: {err}"))?;
+        let (mut browser, mut handler) = Browser::launch(config)
+            .await
+            .context("Failed to launch web browser")?;
 
-    let handle = tokio::task::spawn(async move {
-        while let Some(h) = handler.next().await {
-            if h.is_err() {
-                break;
+        let handle = tokio::task::spawn(async move {
+            while let Some(h) = handler.next().await {
+                if h.is_err() {
+                    break;
+                }
             }
-        }
-    });
+        });
 
-    let page = browser
-        .new_page(SSO_LOGIN_URL)
-        .await
-        .context("Failed to create new web page")?;
+        let url: String = self.config.get_value("authentication.sso.login_url")?;
+        let page = browser
+            .new_page(url)
+            .await
+            .context("Failed to create new web page")?;
 
-    let auth_cookie = wait_for_auth_cookie(&page).await?;
+        let auth_cookie = wait_for_auth_cookie(&page).await?;
 
-    browser.close().await?;
-    let _ = handle.await;
+        browser.close().await?;
+        let _ = handle.await;
 
-    Ok(auth_cookie)
+        Ok(auth_cookie)
+    }
 }
 
 fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
@@ -95,10 +118,11 @@ fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
 }
 
 fn read_cookie_from_file() -> Result<Option<AuthCookie>> {
-    let file = File::open(COOKIE_FILE_NAME)?;
+    let file = File::open(COOKIE_FILE_NAME).context("Failed to open cookie file")?;
     let reader = std::io::BufReader::new(file);
 
-    let cookie: AuthCookie = serde_json::from_reader(reader)?;
+    let cookie: AuthCookie =
+        serde_json::from_reader(reader).context("Failed to deserialize cookie from file")?;
     Ok(Some(cookie))
 }
 
