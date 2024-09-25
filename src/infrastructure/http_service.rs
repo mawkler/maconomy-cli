@@ -14,6 +14,8 @@ async fn send_with_cookie(
         .try_clone()
         .context("Failed to clone request")?
         .header("Cookie", auth_cookie.to_string())
+        .header("Authorization", format!("X-Cookie {}", auth_cookie.name))
+        .header("Content-Type", "application/json")
         .send()
         .await
         .context("Failed to send request")
@@ -24,7 +26,7 @@ impl HttpService {
         Self { auth_service }
     }
 
-    async fn send_request_with_auth(
+    pub(crate) async fn send_request_with_auth(
         &self,
         request: reqwest::RequestBuilder,
     ) -> Result<reqwest::Response> {

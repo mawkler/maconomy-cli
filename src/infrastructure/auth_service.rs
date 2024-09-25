@@ -15,8 +15,8 @@ const POLL_INTERVAL: Duration = Duration::from_secs(1);
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct AuthCookie {
-    name: String,
-    value: String,
+    pub name: String,
+    pub value: String,
 }
 
 impl From<Cookie> for AuthCookie {
@@ -37,13 +37,15 @@ impl Display for AuthCookie {
 pub(crate) struct AuthService {
     config: Configuration,
     auth_cookie: Option<AuthCookie>,
+    login_url: String,
 }
 
 impl AuthService {
-    pub(crate) fn new(config: Configuration) -> Self {
+    pub(crate) fn new(login_url: String, config: Configuration) -> Self {
         Self {
             config,
             auth_cookie: None,
+            login_url,
         }
     }
 
@@ -87,9 +89,8 @@ impl AuthService {
             }
         });
 
-        let url: String = self.config.get_value("authentication.sso.login_url")?;
         let page = browser
-            .new_page(url)
+            .new_page(&self.login_url)
             .await
             .context("Failed to create new web page")?;
 

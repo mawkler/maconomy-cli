@@ -17,11 +17,14 @@ async fn main() -> Result<()> {
     let client_id = config.get_value("authentication.sso.client_id")?;
     let tenant_id = config.get_value("authentication.sso.tenant_id")?;
 
-    let mut repository = TimeRegistrationRepository::new(url, company_name).unwrap();
+    let login_url = config.get_value("authentication.sso.login_url")?;
+    let auth_service = AuthService::new(login_url, config);
+    let http_service = HttpService::new(auth_service);
+
+    let mut repository = TimeRegistrationRepository::new(url, company_name, http_service).unwrap();
+    repository.get_container_instance_id().await.unwrap();
 
     // let arguments = parse_arguments();
-
-    let _ = repository.login_sso(auth_url, client_id, tenant_id).await;
 
     // match arguments {
     //     Login {

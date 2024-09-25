@@ -1,3 +1,5 @@
+use super::{http_service::HttpService, time_registration::Meta};
+use crate::infrastructure::time_registration::TimeRegistration;
 use anyhow::{anyhow, bail, Context, Result};
 use oauth2::{
     basic::BasicClient, AuthUrl, ClientId, CsrfToken, PkceCodeChallenge, RedirectUrl, Scope,
@@ -5,13 +7,9 @@ use oauth2::{
 use reqwest::{header::HeaderMap, Client};
 use serde::Deserialize;
 
-use super::time_registration::Meta;
-use crate::infrastructure::time_registration::TimeRegistration;
-
-#[allow(dead_code)]
-
 pub struct TimeRegistrationRepository {
     client: Client,
+    http_service: HttpService,
     url: String,
     company_name: String,
     authorization_cookie: Option<String>,
@@ -32,7 +30,7 @@ fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<&str> {
 }
 
 impl TimeRegistrationRepository {
-    pub fn new(url: String, company_name: String) -> Result<Self> {
+    pub fn new(url: String, company_name: String, http_service: HttpService) -> Result<Self> {
         let client = reqwest::Client::builder()
             .cookie_store(true)
             .build()
@@ -40,6 +38,7 @@ impl TimeRegistrationRepository {
 
         Ok(Self {
             url,
+            http_service,
             company_name,
             client,
             authorization_cookie: None,
@@ -116,19 +115,11 @@ impl TimeRegistrationRepository {
     pub async fn get_container_instance_id(&mut self) -> Result<()> {
         let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances");
-        let cookie = self
-            .authorization_cookie
-            .as_ref()
-            .ok_or(anyhow!("Not logged in"))?;
-        let authorization = format!("X-Cookie {cookie}");
 
+        let request = self.client.post(&url).body("{}");
         let response = self
-            .client
-            .post(url)
-            .header("Authorization", authorization)
-            .header("Content-Type", "application/json")
-            .body("{}")
-            .send()
+            .http_service
+            .send_request_with_auth(request)
             .await
             .context("Failed to send request")?;
 
@@ -144,6 +135,9 @@ impl TimeRegistrationRepository {
             .context("Could not deserialize response")?
             .meta
             .container_instance_id;
+
+        dbg!(&concurrency_control);
+        dbg!(&container_instance_id);
 
         self.concurrency_control = Some(concurrency_control);
         self.container_instance_id = Some(container_instance_id);
