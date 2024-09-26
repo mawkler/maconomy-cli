@@ -1,8 +1,8 @@
 use crate::{
-    cli::arguments::parse_arguments, cli::arguments::Command::*, config::Configuration,
-    infrastructure::time_registration_repository::TimeRegistrationRepository,
+    config::Configuration, infrastructure::time_registration_repository::TimeRegistrationRepository,
 };
 use anyhow::{Ok, Result};
+use infrastructure::{auth_service::AuthService, http_service::HttpService};
 
 mod cli;
 mod config;
@@ -13,9 +13,6 @@ async fn main() -> Result<()> {
     let config = Configuration::new();
     let url = config.get_value("maconomy_url")?;
     let company_name = config.get_value("company")?;
-    let auth_url = config.get_value("authentication.sso.url")?;
-    let client_id = config.get_value("authentication.sso.client_id")?;
-    let tenant_id = config.get_value("authentication.sso.tenant_id")?;
 
     let login_url = config.get_value("authentication.sso.login_url")?;
     let auth_service = AuthService::new(login_url, config);

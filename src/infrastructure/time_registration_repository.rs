@@ -6,6 +6,7 @@ use oauth2::{
 };
 use reqwest::{header::HeaderMap, Client};
 use serde::Deserialize;
+use serde_json::json;
 
 pub struct TimeRegistrationRepository {
     client: Client,
@@ -116,7 +117,8 @@ impl TimeRegistrationRepository {
         let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances");
 
-        let request = self.client.post(&url).body("{}");
+        let body = json!({"panes": {}});
+        let request = self.client.post(&url).body(body.to_string());
         let response = self
             .http_service
             .send_request_with_auth(request)

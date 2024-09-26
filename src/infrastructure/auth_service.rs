@@ -6,6 +6,7 @@ use chromiumoxide::cdp::browser_protocol::network::Cookie;
 use chromiumoxide::page::Page;
 use serde::Deserialize;
 use std::fmt::Display;
+use std::io::BufReader;
 use std::{fs::File, io::Write, time::Duration};
 
 const COOKIE_NAME_PREFIX: &str = "Maconomy-";
@@ -56,7 +57,7 @@ impl AuthService {
         }
 
         if let Some(cookie) = read_cookie_from_file()? {
-            println!("Found cookie in file");
+            println!("Found cookie file");
             return Ok(cookie.clone());
         }
 
@@ -118,12 +119,17 @@ fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
     Ok(())
 }
 
+// TODO: change Result to a cleaner type that is NotFound or Other
 fn read_cookie_from_file() -> Result<Option<AuthCookie>> {
-    let file = File::open(COOKIE_FILE_NAME).context("Failed to open cookie file")?;
-    let reader = std::io::BufReader::new(file);
+    let file = match File::open(COOKIE_FILE_NAME) {
+        Ok(file) => file,
+        Err(_) => return Ok(None),
+    };
 
+    let reader = BufReader::new(file);
     let cookie: AuthCookie =
         serde_json::from_reader(reader).context("Failed to deserialize cookie from file")?;
+
     Ok(Some(cookie))
 }
 
