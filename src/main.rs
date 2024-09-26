@@ -10,6 +10,8 @@ mod infrastructure;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    env_logger::init(); // Enable logging
+
     let config = Configuration::new();
     let url = config.get_value("maconomy_url")?;
     let company_name = config.get_value("company")?;
@@ -19,7 +21,7 @@ async fn main() -> Result<()> {
     let http_service = HttpService::new(auth_service);
 
     let mut repository = TimeRegistrationRepository::new(url, company_name, http_service).unwrap();
-    repository.get_container_instance_id().await.unwrap();
+    repository.set_container_instance_id().await.unwrap();
 
     // let arguments = parse_arguments();
 

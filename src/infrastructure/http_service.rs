@@ -1,5 +1,6 @@
 use super::auth_service::{AuthCookie, AuthService};
 use anyhow::{bail, Context, Result};
+use log::debug;
 use reqwest::StatusCode;
 
 const MACONOMY_CONTAINERS_JSON: &str = "application/vnd.deltek.maconomy.containers+json";
@@ -41,7 +42,9 @@ impl HttpService {
             return Ok(response);
         }
 
+        debug!("Got {} from maconomy", response.status());
         if let StatusCode::UNAUTHORIZED = response.status() {
+            debug!("Attempting to reauthenticate");
             // Reauthenticate (session cookie may have timed out)
             let auth_cookie = self
                 .auth_service

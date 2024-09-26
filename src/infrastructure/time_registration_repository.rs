@@ -1,6 +1,7 @@
 use super::{http_service::HttpService, time_registration::Meta};
 use crate::infrastructure::time_registration::TimeRegistration;
 use anyhow::{anyhow, bail, Context, Result};
+use log::info;
 use oauth2::{
     basic::BasicClient, AuthUrl, ClientId, CsrfToken, PkceCodeChallenge, RedirectUrl, Scope,
 };
@@ -14,6 +15,8 @@ pub struct TimeRegistrationRepository {
     url: String,
     company_name: String,
     authorization_cookie: Option<String>,
+    /// Needs to be included in a Maconomy-Concurrency-Control header when sending requests to
+    /// maconomy
     concurrency_control: Option<String>,
     container_instance_id: Option<String>,
 }
@@ -113,7 +116,7 @@ impl TimeRegistrationRepository {
         self.authorization_cookie.is_some()
     }
 
-    pub async fn get_container_instance_id(&mut self) -> Result<()> {
+    pub async fn set_container_instance_id(&mut self) -> Result<()> {
         let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances");
 
@@ -148,8 +151,8 @@ impl TimeRegistrationRepository {
 
     pub async fn get_time_registration(&mut self) -> Result<TimeRegistration> {
         if self.container_instance_id.is_none() || self.concurrency_control.is_none() {
-            println!("Fetching container instance ID...");
-            self.get_container_instance_id()
+            info!("Fetching container instance ID...");
+            self.set_container_instance_id()
                 .await
                 .context("Failed to get container instance ID")?;
         }

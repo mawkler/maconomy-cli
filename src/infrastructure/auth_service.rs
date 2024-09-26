@@ -4,6 +4,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::network::Cookie;
 use chromiumoxide::page::Page;
+use log::info;
 use serde::Deserialize;
 use std::fmt::Display;
 use std::io::BufReader;
@@ -52,16 +53,17 @@ impl AuthService {
 
     pub(crate) async fn authenticate(&self) -> Result<AuthCookie> {
         if let Some(cookie) = &self.auth_cookie {
-            println!("Service has cookie");
+            info!("Found service cookie in memory");
             return Ok(cookie.clone());
         }
 
+        info!("Cookie not found in memory, attempting to read in from file");
         if let Some(cookie) = read_cookie_from_file()? {
-            println!("Found cookie file");
+            info!("Found cookie in file");
             return Ok(cookie.clone());
         }
 
-        println!("Cookie not found, opening browser");
+        info!("Cookie file not found, opening browser");
         self.reauthenticate().await
     }
 
