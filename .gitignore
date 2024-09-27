@@ -1,3 +1,4 @@
 /target
 .env
 sso_login/node_modules/
+maconomy_cookie

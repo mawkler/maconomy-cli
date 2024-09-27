@@ -3,8 +3,6 @@ use anyhow::{bail, Context, Result};
 use log::debug;
 use reqwest::StatusCode;
 
-const MACONOMY_CONTAINERS_JSON: &str = "application/vnd.deltek.maconomy.containers+json";
-
 pub struct HttpService {
     auth_service: AuthService,
 }
@@ -13,17 +11,13 @@ async fn send_with_cookie(
     request: &reqwest::RequestBuilder,
     auth_cookie: AuthCookie,
 ) -> Result<reqwest::Response> {
-    request
+    let request = request
         .try_clone()
         .context("Failed to clone request")?
         .header("Cookie", auth_cookie.to_string())
-        .header("Authorization", format!("X-Cookie {}", auth_cookie.name))
-        // NOTE: Assumes that all requests have this content-type. If not, refactor it out and let
-        // caller set application-type
-        .header("Content-Type", MACONOMY_CONTAINERS_JSON)
-        .send()
-        .await
-        .context("Failed to send request")
+        .header("Authorization", format!("X-Cookie {}", auth_cookie.name));
+    debug!("Sending request {request:?}");
+    request.send().await.context("Failed to send request")
 }
 
 impl HttpService {
@@ -37,12 +31,13 @@ impl HttpService {
     ) -> Result<reqwest::Response> {
         let auth_cookie = self.auth_service.authenticate().await?;
         let response = send_with_cookie(&request, auth_cookie).await?;
+        let status = response.status();
 
-        if response.status().is_success() {
+        if status.is_success() {
             return Ok(response);
         }
 
-        debug!("Got {} from maconomy", response.status());
+        debug!("Got {status} from maconomy");
         if let StatusCode::UNAUTHORIZED = response.status() {
             debug!("Attempting to reauthenticate");
             // Reauthenticate (session cookie may have timed out)
@@ -66,7 +61,7 @@ impl HttpService {
                 .text()
                 .await
                 .unwrap_or_else(|_| "failed to decode request body".to_string());
-            bail!("Something went wrong when sending request: {body}:\nrequest: {request:?}")
+            bail!("Got {status} went wrong when sending request: {body}")
         }
     }
 }

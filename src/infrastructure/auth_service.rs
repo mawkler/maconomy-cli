@@ -141,6 +141,8 @@ async fn get_maconomy_cookie(page: &Page) -> Option<Cookie> {
         .ok()?
         .into_iter()
         // Could there be more than one maconomy cookie?
+        // TODO: fetch the name of the cookie from the Maconomy-Cookie header, and use that to make
+        // sure that we get the right cookie
         .find(|c| c.name.starts_with(COOKIE_NAME_PREFIX))
 }
 

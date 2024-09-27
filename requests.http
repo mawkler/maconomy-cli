@@ -4,17 +4,7 @@
 # @prompt username
 # @prompt password
 
-# Authentication
-GET {{base_url}}/auth/{{company}}
-Authorization: Basic {{username}}:{{password}}
-Maconomy-Authentication: X-Cookie
-
-###
-
-@cookie_name = put_cookie_name_here
-@cookie_value = put_cookie_value_here
-
-# Get instances
+# Get instances (to get concurrency control and container instance ID needed for next request)
 POST {{base_url}}/containers/{{company}}/timeregistration/instances
 Authorization: X-Cookie {{cookie_name}}
 Content-Type: application/vnd.deltek.maconomy.containers+json
@@ -22,12 +12,29 @@ Cookie: {{cookie_name}}={{cookie_value}}
 
 {"panes": {}}
 
+# @lang=lua
+> {%
+  local function capture_header(variable_name, header_name)
+    local header_values = response.headers[header_name]
+    if header_values ~= nil then
+      client.global.set(variable_name, header_values[1])
+    end
+  end
+
+  capture_header('concurrency_control', 'maconomy-concurrency-control')
+
+  local container_instance_id = vim.json.decode(response.body).meta.containerInstanceId
+  client.global.set('container_instance_id', container_instance_id)
+%}
+
 ###
 
-# Get all table rows
+# Get all table rows (requires `request.hooks.encode_url = false` in rest.nvim to not have the `;` incorrectly encoded)
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data;any
 Authorization: X-Cookie {{cookie_name}}
 Maconomy-Concurrency-Control: {{concurrency_control}}
+Content-length: 0
+Cookie: {{cookie_name}}={{cookie_value}}
 
 ###
 
