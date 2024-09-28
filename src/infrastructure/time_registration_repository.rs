@@ -4,7 +4,6 @@ use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info};
 use reqwest::{header::HeaderMap, Client};
 use serde::Deserialize;
-use serde_json::json;
 
 const MACONOMY_CONTAINERS_JSON: &str = "application/vnd.deltek.maconomy.containers+json";
 
@@ -53,13 +52,14 @@ impl TimeRegistrationRepository {
     pub async fn set_container_instance_id(&mut self) -> Result<()> {
         let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances");
+        let body = include_str!("requests/time_registration_container.json");
 
-        let body = json!({"panes": {}});
         let request = self
             .client
             .post(&url)
             .header("Content-Type", MACONOMY_CONTAINERS_JSON)
-            .body(body.to_string());
+            // Specifies the fields that we want from Maconomy
+            .body(body);
         let response = self
             .http_service
             .send_request_with_auth(request)
@@ -126,11 +126,7 @@ impl TimeRegistrationRepository {
             bail!("Server responded with {status}");
         }
 
-        let body = response.text().await.unwrap();
-        dbg!(&body);
-        todo!()
-
-        // let time_registration = response.json().await.context("Failed to parse response")?;
-        // Ok(time_registration)
+        let time_registration = response.json().await.context("Failed to parse response")?;
+        Ok(time_registration)
     }
 }

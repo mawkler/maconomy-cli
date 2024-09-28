@@ -1,0 +1,51 @@
+{
+  "panes": {
+    "card": {
+      "fields": [
+        "periodstartvar",
+        "periodendvar",
+        "employeenamevar",
+        "datevar",
+        "weeknumbervar",
+        "fixednumberday1var",
+        "fixednumberday2var",
+        "fixednumberday3var",
+        "fixednumberday4var",
+        "fixednumberday5var",
+        "fixednumberday6var",
+        "fixednumberday7var",
+        "totalnumberday1var",
+        "totalnumberday2var",
+        "totalnumberday3var",
+        "totalnumberday4var",
+        "totalnumberday5var",
+        "totalnumberday6var",
+        "totalnumberday7var",
+        "regulartimeday1var",
+        "regulartimeday2var",
+        "regulartimeday3var",
+        "regulartimeday4var",
+        "regulartimeday5var",
+        "regulartimeday6var",
+        "regulartimeday7var"
+      ]
+    },
+    "table": {
+      "fields": [
+        "jobnumber",
+        "numberday1",
+        "numberday2",
+        "numberday3",
+        "numberday4",
+        "numberday5",
+        "numberday6",
+        "numberday7",
+        "entrytext",
+        "taskname",
+        "timeregistrationunit",
+        "jobnamevar",
+        "tasktextvar"
+      ]
+    }
+  }
+}

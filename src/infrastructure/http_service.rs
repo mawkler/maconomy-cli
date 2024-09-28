@@ -51,7 +51,7 @@ impl HttpService {
             let body = response.text().await?;
 
             let response = send_with_cookie(&request, auth_cookie).await?;
-            if !status.is_success() {
+            if !response.status().is_success() {
                 let body = response.text().await?;
                 bail!("Request failed with status {status}: {body}\nrequest: {request:?}")
             }

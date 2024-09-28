@@ -1,9 +1,9 @@
 use crate::config::Configuration;
-use ::futures::StreamExt;
 use anyhow::{anyhow, bail, Context, Result};
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::network::Cookie;
 use chromiumoxide::page::Page;
+use futures::StreamExt;
 use log::info;
 use serde::Deserialize;
 use std::fmt::Display;
