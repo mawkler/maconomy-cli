@@ -7,16 +7,19 @@ use serde::Deserialize;
 
 const MACONOMY_CONTAINERS_JSON: &str = "application/vnd.deltek.maconomy.containers+json";
 
+struct ContainerInstance {
+    id: String,
+    /// Needs to be included in a Maconomy-Concurrency-Control header for each request to Maconomy
+    concurrency_control: String,
+}
+
 pub struct TimeRegistrationRepository {
     client: Client,
     http_service: HttpService,
     url: String,
     company_name: String,
     authorization_cookie: Option<String>,
-    /// Needs to be included in a Maconomy-Concurrency-Control header when sending requests to
-    /// maconomy
-    concurrency_control: Option<String>,
-    container_instance_id: Option<String>,
+    container_instance: Option<ContainerInstance>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -44,12 +47,11 @@ impl TimeRegistrationRepository {
             company_name,
             client,
             authorization_cookie: None,
-            concurrency_control: None,
-            container_instance_id: None,
+            container_instance: None,
         })
     }
 
-    pub async fn set_container_instance_id(&mut self) -> Result<()> {
+    async fn get_container_instance(&self) -> Result<ContainerInstance> {
         let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances");
         let body = include_str!("request_bodies/time_registration_container.json");
@@ -82,37 +84,40 @@ impl TimeRegistrationRepository {
         debug!("Got concurrency control: {concurrency_control}");
         debug!("Got container instance ID: {container_instance_id}");
 
-        self.concurrency_control = Some(concurrency_control);
-        self.container_instance_id = Some(container_instance_id);
-
-        Ok(())
+        Ok(ContainerInstance {
+            id: container_instance_id,
+            concurrency_control,
+        })
     }
 
     pub async fn get_time_registration(&mut self) -> Result<TimeRegistration> {
-        // TODO: refactor out these into a `get_container_instance_id` function
-        if self.container_instance_id.is_none() || self.concurrency_control.is_none() {
-            info!("Fetching container instance ID");
-            self.set_container_instance_id()
+        if self.container_instance.is_none() {
+            info!("Fetching container instance");
+            let container_instance = self
+                .get_container_instance()
                 .await
                 .context("Failed to get container instance ID")?;
+
+            self.container_instance = Some(container_instance);
         }
 
-        let container_instance_id = self
-            .container_instance_id
+        let container_instance = self
+            .container_instance
             .as_ref()
-            .expect("Missing container instance ID");
-        let concurrency_control = self
-            .concurrency_control
-            .as_ref()
-            .expect("Missing concurrency control");
+            .expect("Missing container instance");
+        let instance_id = &container_instance.id;
 
         let (url, company) = (&self.url, &self.company_name);
-        let url = format!("{url}/containers/{company}/timeregistration/instances/{container_instance_id}/data;any");
+        let url =
+            format!("{url}/containers/{company}/timeregistration/instances/{instance_id}/data;any");
 
         let request = self
             .client
             .post(url)
-            .header("Maconomy-Concurrency-Control", concurrency_control)
+            .header(
+                "Maconomy-Concurrency-Control",
+                &container_instance.concurrency_control,
+            )
             .header("Content-length", "0");
 
         let response = self
