@@ -52,7 +52,7 @@ impl TimeRegistrationRepository {
     pub async fn set_container_instance_id(&mut self) -> Result<()> {
         let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances");
-        let body = include_str!("requests/time_registration_container.json");
+        let body = include_str!("request_bodies/time_registration_container.json");
 
         let request = self
             .client
