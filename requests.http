@@ -10,7 +10,7 @@ Authorization: X-Cookie {{cookie_name}}
 Content-Type: application/vnd.deltek.maconomy.containers+json
 Cookie: {{cookie_name}}={{cookie_value}}
 
-{"panes": {}}
+{ "panes": { "card": { "fields": [ "periodstartvar", "periodendvar", "employeenamevar", "datevar", "weeknumbervar", "fixednumberday1var", "fixednumberday2var", "fixednumberday3var", "fixednumberday4var", "fixednumberday5var", "fixednumberday6var", "fixednumberday7var", "totalnumberday1var", "totalnumberday2var", "totalnumberday3var", "totalnumberday4var", "totalnumberday5var", "totalnumberday6var", "totalnumberday7var", "regulartimeday1var", "regulartimeday2var", "regulartimeday3var", "regulartimeday4var", "regulartimeday5var", "regulartimeday6var", "regulartimeday7var" ] }, "table": { "fields": [ "jobnumber", "numberday1", "numberday2", "numberday3", "numberday4", "numberday5", "numberday6", "numberday7", "entrytext", "taskname", "timeregistrationunit", "jobnamevar", "tasktextvar" ] } } }
 
 # @lang=lua
 > {%
@@ -36,10 +36,27 @@ Maconomy-Concurrency-Control: {{concurrency_control}}
 Content-length: 0
 Cookie: {{cookie_name}}={{cookie_value}}
 
+# @lang=lua
+> {%
+  local function capture_header(variable_name, header_name)
+    local header_values = response.headers[header_name]
+    if header_values ~= nil then
+      client.global.set(variable_name, header_values[1])
+    end
+  end
+
+  capture_header('concurrency_control', 'maconomy-concurrency-control')
+%}
+
 ###
 
+@row = 0
+
 # Set data
-POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/0
+POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/{{row}}
 Authorization: X-Cookie {{cookie_name}}
 Maconomy-Concurrency-Control: {{concurrency_control}}
-Content-Type: application/json
+Content-Type: application/vnd.deltek.maconomy.containers+json
+Cookie: {{cookie_name}}={{cookie_value}}
+
+{"data":{"numberday1":0}}
