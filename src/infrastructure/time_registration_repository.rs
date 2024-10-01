@@ -14,7 +14,7 @@ struct ContainerInstance {
     concurrency_control: String,
 }
 
-pub struct TimeRegistrationRepository {
+pub(crate) struct TimeRegistrationRepository {
     client: Client,
     http_service: HttpService,
     url: String,

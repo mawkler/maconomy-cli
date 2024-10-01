@@ -21,10 +21,8 @@ async fn main() -> Result<()> {
     let http_service = HttpService::new(auth_service);
 
     let mut repository = TimeRegistrationRepository::new(url, company_name, http_service).unwrap();
-    repository.set_container_instance_id().await.unwrap();
-
     let time_registration = repository.get_time_registration().await.unwrap();
-    dbg!(&time_registration);
+    println!("{time_registration}");
 
     // let arguments = parse_arguments();
 
