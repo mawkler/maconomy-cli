@@ -2,6 +2,7 @@ use crate::{
     config::Configuration, infrastructure::time_registration_repository::TimeRegistrationRepository,
 };
 use anyhow::{Ok, Result};
+use cli::arguments::{parse_arguments, Command};
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
 
 mod cli;
@@ -21,10 +22,18 @@ async fn main() -> Result<()> {
     let http_service = HttpService::new(auth_service);
 
     let mut repository = TimeRegistrationRepository::new(url, company_name, http_service).unwrap();
-    let time_registration = repository.get_time_registration().await.unwrap();
-    println!("{time_registration}");
 
-    // let arguments = parse_arguments();
+    match parse_arguments() {
+        Command::Get { date: _ } => {
+            cli::commands::get(&mut repository).await;
+        }
+        Command::Add {
+            time: _,
+            job: _,
+            task: _,
+            date: _,
+        } => todo!(),
+    };
 
     // match arguments {
     //     Login {

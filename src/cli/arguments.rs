@@ -2,19 +2,8 @@ use clap::{Parser, Subcommand};
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Log in
-    Login {
-        /// Username
-        #[arg(short, long)]
-        username: String,
-
-        /// Password
-        #[arg(short, long)]
-        password: String,
-    },
-
     /// Get time
-    Get { date: String },
+    Get { date: Option<String> },
 
     /// Add time
     Add {
