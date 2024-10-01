@@ -12,19 +12,37 @@ pub(crate) struct Row<'a> {
     #[tabled(rename = "Task name")]
     pub(crate) task_name: &'a str,
     #[tabled(rename = "Mon")]
+    #[tabled(display_with = "display_hours")]
     pub(crate) monday: f32,
     #[tabled(rename = "Tue")]
+    #[tabled(display_with = "display_hours")]
     pub(crate) tuesday: f32,
     #[tabled(rename = "Wed")]
+    #[tabled(display_with = "display_hours")]
     pub(crate) wednesday: f32,
     #[tabled(rename = "Thu")]
+    #[tabled(display_with = "display_hours")]
     pub(crate) thursday: f32,
     #[tabled(rename = "Fri")]
+    #[tabled(display_with = "display_hours")]
     pub(crate) friday: f32,
     #[tabled(rename = "Sat")]
+    #[tabled(display_with = "display_hours")]
     pub(crate) saturday: f32,
     #[tabled(rename = "Sun")]
+    #[tabled(display_with = "display_hours")]
     pub(crate) sunday: f32,
+}
+
+fn display_hours(hours: &f32) -> impl Display {
+    if let 0.0 = hours {
+        return "".to_string();
+    }
+
+    let whole_hours = hours.trunc() as u32;
+    let minutes = ((*hours - whole_hours as f32) * 60.0).floor() as u32;
+
+    format!("{whole_hours}:{minutes:02}")
 }
 
 impl<'a> From<&'a time_registration::TableRecord> for Row<'a> {
@@ -75,5 +93,21 @@ impl Display for time_registration::TimeRegistration {
             .with(gray_borders());
 
         write!(f, "{table}")
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn display_hours_test() {
+        let hours = [1.5, 0.25, 12.75, 0.0, 23.999, 10.1];
+        let expected = ["1:30", "0:15", "12:45", "", "23:59", "10:06"];
+
+        for (i, &hours) in hours.iter().enumerate() {
+            let result = display_hours(&hours).to_string();
+            assert_eq!(result, expected[i], "Failed at index {}", i);
+        }
     }
 }
