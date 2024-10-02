@@ -5,7 +5,9 @@ use log::{debug, info};
 use reqwest::{header::HeaderMap, Client};
 use serde::Deserialize;
 
-const MACONOMY_CONTAINERS_JSON: &str = "application/vnd.deltek.maconomy.containers+json";
+const MACONOMY_JSON_CONTENT_TYPE: &str = "application/vnd.deltek.maconomy.containers+json";
+
+struct Date(NaiveDate);
 
 #[derive(Clone)]
 struct ContainerInstance {
@@ -19,7 +21,6 @@ pub(crate) struct TimeRegistrationRepository {
     http_service: HttpService,
     url: String,
     company_name: String,
-    authorization_cookie: Option<String>,
     container_instance: Option<ContainerInstance>,
 }
 
@@ -36,20 +37,19 @@ fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<&str> {
 }
 
 impl TimeRegistrationRepository {
-    pub fn new(url: String, company_name: String, http_service: HttpService) -> Result<Self> {
-        let client = reqwest::Client::builder()
-            .cookie_store(true)
-            .build()
-            .context("Failed to create HTTP client")?;
-
-        Ok(Self {
+    pub fn new(
+        url: String,
+        company_name: String,
+        client: Client,
+        http_service: HttpService,
+    ) -> Self {
+        Self {
             url,
             http_service,
             company_name,
             client,
-            authorization_cookie: None,
             container_instance: None,
-        })
+        }
     }
 
     async fn fetch_container_instance(&self) -> Result<ContainerInstance> {
@@ -60,7 +60,7 @@ impl TimeRegistrationRepository {
         let request = self
             .client
             .post(&url)
-            .header("Content-Type", MACONOMY_CONTAINERS_JSON)
+            .header("Content-Type", MACONOMY_JSON_CONTENT_TYPE)
             // Specifies the fields that we want from Maconomy
             .body(body);
         let response = self
@@ -97,7 +97,7 @@ impl TimeRegistrationRepository {
             let container_instance = self
                 .fetch_container_instance()
                 .await
-                .context("Failed to get container instance ID")?;
+                .context("Failed to get container instance")?;
 
             self.container_instance = Some(container_instance);
         }

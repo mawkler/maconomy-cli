@@ -114,6 +114,7 @@ fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
     })
     .to_string();
 
+    // TODO: move to ~/.local/share/maconomy-cli/
     let mut file = File::create(COOKIE_FILE_NAME).context("Failed to create cookie file")?;
     file.write_all(cookie.as_bytes())
         .context("Failed to write cookie to file")?;
