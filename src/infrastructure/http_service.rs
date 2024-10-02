@@ -48,7 +48,6 @@ impl HttpService {
                 .context("Failed to reauthenticate")?;
 
             let status = response.status();
-            let body = response.text().await?;
 
             let response = send_with_cookie(&request, auth_cookie).await?;
             if !response.status().is_success() {

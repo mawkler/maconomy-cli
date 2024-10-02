@@ -4,10 +4,12 @@ use crate::{
 use anyhow::Context;
 use anyhow::{Ok, Result};
 use cli::arguments::{parse_arguments, Command};
+use cli::commands;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
 
 mod cli;
 mod config;
+mod domain;
 mod infrastructure;
 
 #[tokio::main]
@@ -29,11 +31,15 @@ async fn main() -> Result<()> {
     let mut repository = TimeRegistrationRepository::new(url, company_name, client, http_service);
 
     match parse_arguments() {
-        Command::Get { date: _ } => {
-            cli::commands::get(&mut repository).await?;
-        }
+        Command::Get { date: _ } => commands::get(&mut repository).await?,
+        Command::Set {
+            hours,
+            day,
+            job: _,
+            task: _,
+        } => commands::set(hours, day, &mut repository).await?,
         Command::Add {
-            time: _,
+            hours: _,
             job: _,
             task: _,
             date: _,

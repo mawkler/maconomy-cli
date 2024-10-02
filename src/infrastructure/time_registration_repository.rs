@@ -2,18 +2,17 @@ use super::{http_service::HttpService, time_registration::Meta};
 use crate::infrastructure::time_registration::TimeRegistration;
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info};
-use reqwest::{header::HeaderMap, Client};
+use reqwest::{header::HeaderMap, Client, RequestBuilder};
 use serde::Deserialize;
+use serde_json::json;
 
 const MACONOMY_JSON_CONTENT_TYPE: &str = "application/vnd.deltek.maconomy.containers+json";
-
-struct Date(NaiveDate);
 
 #[derive(Clone)]
 struct ContainerInstance {
     id: String,
     /// Needs to be included in a Maconomy-Concurrency-Control header for each request to Maconomy
-    concurrency_control: String,
+    pub concurrency_control: String,
 }
 
 pub(crate) struct TimeRegistrationRepository {
@@ -33,7 +32,7 @@ fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<&str> {
     headers
         .get("maconomy-concurrency-control")
         .and_then(|c| c.to_str().ok())
-        .ok_or(anyhow!("Failed to extract concurrency control"))
+        .ok_or_else(|| anyhow!("Failed to extract concurrency control from headers"))
 }
 
 impl TimeRegistrationRepository {
@@ -50,6 +49,18 @@ impl TimeRegistrationRepository {
             client,
             container_instance: None,
         }
+    }
+
+    fn update_concurrency_control(&mut self, concurrency_control: &str) {
+        let container_instance = self
+            .container_instance
+            .as_ref()
+            .expect("container instance should have already been set");
+
+        self.container_instance = Some(ContainerInstance {
+            concurrency_control: concurrency_control.to_string(),
+            id: container_instance.id.clone(),
+        });
     }
 
     async fn fetch_container_instance(&self) -> Result<ContainerInstance> {
@@ -108,6 +119,19 @@ impl TimeRegistrationRepository {
         Ok(container_instance.clone())
     }
 
+    async fn send_request(&mut self, request: RequestBuilder) -> Result<reqwest::Response> {
+        let response = self
+            .http_service
+            .send_request_with_auth(request)
+            .await
+            .context("Failed to send request")?;
+
+        let concurrency_control = concurrency_control_from_headers(response.headers())?;
+        self.update_concurrency_control(concurrency_control);
+
+        Ok(response)
+    }
+
     pub async fn get_time_registration(&mut self) -> Result<TimeRegistration> {
         let ContainerInstance {
             id,
@@ -123,11 +147,7 @@ impl TimeRegistrationRepository {
             .header("Maconomy-Concurrency-Control", concurrency_control)
             .header("Content-length", "0");
 
-        let response = self
-            .http_service
-            .send_request_with_auth(request)
-            .await
-            .context("Failed to send request")?;
+        let response = self.send_request(request).await?;
 
         let status = &response.status();
         if !status.is_success() {
@@ -136,5 +156,36 @@ impl TimeRegistrationRepository {
 
         let time_registration = response.json().await.context("Failed to parse response")?;
         Ok(time_registration)
+    }
+
+    pub async fn set_time(&mut self, hours: f32, day: u8, row: u8) -> Result<()> {
+        let ContainerInstance {
+            id,
+            concurrency_control,
+        } = self.get_container_instance().await?;
+
+        let (url, company) = (&self.url, &self.company_name);
+        let url = format!(
+            "{url}/containers/{company}/timeregistration/instances/{id}/data/panes/table/{row}"
+        );
+
+        let day = format!("numberday{day}");
+        let body = json!({"data": {day: hours}});
+
+        let request = self
+            .client
+            .post(url)
+            .header("Maconomy-Concurrency-Control", concurrency_control)
+            .header("Content-Type", MACONOMY_JSON_CONTENT_TYPE)
+            .body(body.to_string());
+
+        let response = self.send_request(request).await?;
+
+        let status = &response.status();
+        if !status.is_success() {
+            bail!("Server responded with {status}");
+        }
+
+        Ok(())
     }
 }
