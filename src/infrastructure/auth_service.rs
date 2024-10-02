@@ -1,4 +1,3 @@
-use crate::config::Configuration;
 use anyhow::{anyhow, bail, Context, Result};
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::network::Cookie;
@@ -37,15 +36,13 @@ impl Display for AuthCookie {
 }
 
 pub(crate) struct AuthService {
-    config: Configuration,
     auth_cookie: Option<AuthCookie>,
     login_url: String,
 }
 
 impl AuthService {
-    pub(crate) fn new(login_url: String, config: Configuration) -> Self {
+    pub(crate) fn new(login_url: String) -> Self {
         Self {
-            config,
             auth_cookie: None,
             login_url,
         }

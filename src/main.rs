@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
     let company_name = config.get_value("company")?;
 
     let login_url = config.get_value("authentication.sso.login_url")?;
-    let auth_service = AuthService::new(login_url, config);
+    let auth_service = AuthService::new(login_url);
     let http_service = HttpService::new(auth_service);
     let client = reqwest::Client::builder()
         .cookie_store(true)
