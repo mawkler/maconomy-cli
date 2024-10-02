@@ -59,4 +59,40 @@ Maconomy-Concurrency-Control: {{concurrency_control}}
 Content-Type: application/vnd.deltek.maconomy.containers+json
 Cookie: {{cookie_name}}={{cookie_value}}
 
-{"data":{"numberday1":0}}
+{"data": {"numberday1": 8}}
+
+
+# @lang=lua
+> {%
+  local function capture_header(variable_name, header_name)
+    local header_values = response.headers[header_name]
+    if header_values ~= nil then
+      client.global.set(variable_name, header_values[1])
+    end
+  end
+
+  capture_header('concurrency_control', 'maconomy-concurrency-control')
+%}
+
+###
+
+# Change week (not sure what the 0 does)
+POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/card/0
+Authorization: X-Cookie {{cookie_name}}
+Maconomy-Concurrency-Control: {{concurrency_control}}
+Content-Type: application/vnd.deltek.maconomy.containers+json
+Cookie: {{cookie_name}}={{cookie_value}}
+
+{"data": {"datevar": "2024-10-07"}}
+
+# @lang=lua
+> {%
+  local function capture_header(variable_name, header_name)
+    local header_values = response.headers[header_name]
+    if header_values ~= nil then
+      client.global.set(variable_name, header_values[1])
+    end
+  end
+
+  capture_header('concurrency_control', 'maconomy-concurrency-control')
+%}
