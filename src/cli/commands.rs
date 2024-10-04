@@ -4,24 +4,24 @@ use log::info;
 
 use crate::{
     domain::models::day::Day,
-    infrastructure::repositories::time_registration_repository::TimeRegistrationRepository,
+    infrastructure::repositories::time_sheet_repository::TimeSheetRepository,
 };
 
 // TODO: allow setting date/week
-pub(crate) async fn get(service: &mut TimeRegistrationRepository) -> Result<()> {
-    let time_registration = service
-        .get_time_registration()
+pub(crate) async fn get(service: &mut TimeSheetRepository) -> Result<()> {
+    let time_sheet = service
+        .get_time_sheet()
         .await
-        .context("failed to get time registration")?;
+        .context("failed to get time sheet")?;
 
-    println!("{time_registration}");
+    println!("{time_sheet}");
     Ok(())
 }
 
 pub(crate) async fn set(
     hours: f32,
     day: Option<Day>,
-    repository: &mut TimeRegistrationRepository,
+    repository: &mut TimeSheetRepository,
 ) -> Result<()> {
     let row = 0; // TODO: allow specifying row (i.e. job + task)
 
@@ -39,7 +39,7 @@ pub(crate) async fn set(
         .await
         .context(format!("Failed to set {hours} hours on {day}, row {row}"))?;
 
-    info!("time registration successfully set: {hours} hours on {day}");
+    info!("time sheet successfully set: {hours} hours on {day}");
 
     Ok(())
 }

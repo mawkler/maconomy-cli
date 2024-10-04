@@ -4,7 +4,7 @@ use cli::arguments::{parse_arguments, Command};
 use cli::commands;
 use config::Configuration;
 use infrastructure::repositories::maconomy_http_client::MaconomyHttpClient;
-use infrastructure::repositories::time_registration_repository::TimeRegistrationRepository;
+use infrastructure::repositories::time_sheet_repository::TimeSheetRepository;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
 
 mod cli;
@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
         .context("Failed to create HTTP client")?;
 
     let client = MaconomyHttpClient::new(url, company_name, client, http_service);
-    let mut repository = TimeRegistrationRepository::new(client);
+    let mut repository = TimeSheetRepository::new(client);
 
     match parse_arguments() {
         Command::Get { date: _ } => commands::get(&mut repository).await?,

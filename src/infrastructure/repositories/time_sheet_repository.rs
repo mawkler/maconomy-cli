@@ -6,14 +6,13 @@ use crate::{
 use anyhow::{anyhow, Context, Result};
 use log::info;
 
-// TODO: perhaps rename to TimeRegistrationRepository, and rename TimeRegistrationRepository to TimeRegistrationHttpRepository
-pub(crate) struct TimeRegistrationRepository {
+pub(crate) struct TimeSheetRepository {
     client: MaconomyHttpClient,
     container_instance: Option<ContainerInstance>,
     time_registration: Option<TimeRegistration>,
 }
 
-impl TimeRegistrationRepository {
+impl TimeSheetRepository {
     pub(crate) fn new(repository: MaconomyHttpClient) -> Self {
         Self {
             client: repository,
@@ -43,9 +42,8 @@ impl TimeRegistrationRepository {
         Ok(container_instance.clone())
     }
 
-    // TODO: perhaps rename to `get_week` or something like that?
-    /// Gets and caches time registration
-    pub(crate) async fn get_time_registration(&mut self) -> Result<TimeSheet> {
+    /// Gets and caches time sheet
+    pub(crate) async fn get_time_sheet(&mut self) -> Result<TimeSheet> {
         if let Some(time_registration) = &self.time_registration {
             return Ok(time_registration.clone().into());
         }
@@ -58,7 +56,7 @@ impl TimeRegistrationRepository {
             .client
             .get_time_registration(container_instance)
             .await
-            .context("Failed to get time registration")?;
+            .context("Failed to get time sheet")?;
 
         self.update_concurrency_control(concurrency_control);
         self.time_registration = Some(time_registration.clone());
@@ -67,11 +65,11 @@ impl TimeRegistrationRepository {
     }
 
     pub(crate) async fn set_time(&mut self, hours: f32, day: u8, row: u8) -> Result<()> {
-        // We need to get the time registration before we can set any data
+        // We need to get the time sheet before we can set any data
         let _ = self
-            .get_time_registration()
+            .get_time_sheet()
             .await
-            .context("Failed to get time registration")?;
+            .context("Failed to get time sheet")?;
 
         let container_instance = self
             .get_container_instance()

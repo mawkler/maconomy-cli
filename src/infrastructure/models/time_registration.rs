@@ -1,7 +1,11 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-// This file was (semi) auto-generated based on the JSON response from Maconomy. I just improved the struct names.
+// This file was (semi) auto-generated based on the JSON response from Maconomy. I just improved
+// the struct names.
+//
+// I use the name "time registration" for maconomy's data model, and "time sheet" for this CLI's
+// domain.
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
