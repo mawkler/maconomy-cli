@@ -1,12 +1,14 @@
-use crate::{
-    domain::models::day::Day, infrastructure::time_registration_service::TimeRegistrationService,
-};
 use anyhow::{Context, Result};
 use chrono::{Datelike, Local};
-use log::{debug, info};
+use log::info;
+
+use crate::{
+    domain::models::day::Day,
+    infrastructure::repositories::time_registration_repository::TimeRegistrationRepository,
+};
 
 // TODO: allow setting date/week
-pub(crate) async fn get(service: &mut TimeRegistrationService) -> Result<()> {
+pub(crate) async fn get(service: &mut TimeRegistrationRepository) -> Result<()> {
     let time_registration = service
         .get_time_registration()
         .await
@@ -19,7 +21,7 @@ pub(crate) async fn get(service: &mut TimeRegistrationService) -> Result<()> {
 pub(crate) async fn set(
     hours: f32,
     day: Option<Day>,
-    service: &mut TimeRegistrationService,
+    repository: &mut TimeRegistrationRepository,
 ) -> Result<()> {
     let row = 0; // TODO: allow specifying row (i.e. job + task)
 
@@ -32,7 +34,7 @@ pub(crate) async fn set(
         today
     };
 
-    service
+    repository
         .set_time(hours, day.clone().into(), row)
         .await
         .context(format!("Failed to set {hours} hours on {day}, row {row}"))?;

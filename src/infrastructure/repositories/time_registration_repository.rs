@@ -1,23 +1,19 @@
-use super::{
-    time_registration::TimeRegistration,
-    time_registration_repository::{
-        ConcurrencyControl, ContainerInstance, TimeRegistrationRepository,
-    },
-};
+use super::maconomy_http_client::{ConcurrencyControl, ContainerInstance, MaconomyHttpClient};
+use crate::infrastructure::models::time_registration::TimeRegistration;
 use anyhow::{anyhow, Context, Result};
 use log::info;
 
 // TODO: perhaps rename to TimeRegistrationRepository, and rename TimeRegistrationRepository to TimeRegistrationHttpRepository
-pub(crate) struct TimeRegistrationService {
-    repository: TimeRegistrationRepository,
+pub(crate) struct TimeRegistrationRepository {
+    client: MaconomyHttpClient,
     container_instance: Option<ContainerInstance>,
     time_registration: Option<TimeRegistration>,
 }
 
-impl TimeRegistrationService {
-    pub(crate) fn new(repository: TimeRegistrationRepository) -> Self {
+impl TimeRegistrationRepository {
+    pub(crate) fn new(repository: MaconomyHttpClient) -> Self {
         Self {
-            repository,
+            client: repository,
             container_instance: None,
             time_registration: None,
         }
@@ -28,7 +24,7 @@ impl TimeRegistrationService {
         if self.container_instance.is_none() {
             info!("Fetching container instance");
             let container_instance = self
-                .repository
+                .client
                 .get_container_instance()
                 .await
                 .context("Failed to get container instance")?;
@@ -51,7 +47,7 @@ impl TimeRegistrationService {
             .await
             .context("Failed to get container instance")?;
         let (time_registration, concurrency_control) = self
-            .repository
+            .client
             .get_time_registration(container_instance)
             .await
             .context("Failed to get time registration")?;
@@ -75,7 +71,7 @@ impl TimeRegistrationService {
             .context("Failed to get container instance")?;
 
         let concurrency_control = self
-            .repository
+            .client
             .set_time(hours, day, row, container_instance)
             .await
             .with_context(|| format!("Failed to set {hours} hours on day {day}, row {row}"))?;

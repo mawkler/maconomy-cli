@@ -1,10 +1,13 @@
-use super::{http_service::HttpService, time_registration::Meta};
-use crate::infrastructure::time_registration::TimeRegistration;
 use anyhow::{anyhow, bail, Context, Result};
 use log::debug;
 use reqwest::{header::HeaderMap, Client, RequestBuilder};
 use serde::Deserialize;
 use serde_json::json;
+
+use crate::infrastructure::{
+    http_service::HttpService,
+    models::time_registration::{Meta, TimeRegistration},
+};
 
 const MACONOMY_JSON_CONTENT_TYPE: &str = "application/vnd.deltek.maconomy.containers+json";
 
@@ -27,7 +30,7 @@ pub(crate) struct ContainerInstance {
     pub(crate) concurrency_control: ConcurrencyControl,
 }
 
-pub(crate) struct TimeRegistrationRepository {
+pub(crate) struct MaconomyHttpClient {
     client: Client,
     http_service: HttpService,
     url: String,
@@ -46,7 +49,7 @@ fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<String> {
         .ok_or_else(|| anyhow!("Failed to extract concurrency control from headers"))
 }
 
-impl TimeRegistrationRepository {
+impl MaconomyHttpClient {
     pub fn new(
         url: String,
         company_name: String,

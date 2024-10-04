@@ -1,4 +1,4 @@
-use crate::infrastructure::time_registration;
+use crate::infrastructure::models::time_registration;
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 use tabled::settings::{
