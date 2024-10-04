@@ -5,6 +5,7 @@ use anyhow::Context;
 use anyhow::{Ok, Result};
 use cli::arguments::{parse_arguments, Command};
 use cli::commands;
+use infrastructure::time_registration_service::TimeRegistrationService;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
 
 mod cli;
@@ -28,16 +29,17 @@ async fn main() -> Result<()> {
         .build()
         .context("Failed to create HTTP client")?;
 
-    let mut repository = TimeRegistrationRepository::new(url, company_name, client, http_service);
+    let repository = TimeRegistrationRepository::new(url, company_name, client, http_service);
+    let mut service = TimeRegistrationService::new(repository);
 
     match parse_arguments() {
-        Command::Get { date: _ } => commands::get(&mut repository).await?,
+        Command::Get { date: _ } => commands::get(&mut service).await?,
         Command::Set {
             hours,
             day,
             job: _,
             task: _,
-        } => commands::set(hours, day, &mut repository).await?,
+        } => commands::set(hours, day, &mut service).await?,
         Command::Add {
             hours: _,
             job: _,

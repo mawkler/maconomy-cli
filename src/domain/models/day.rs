@@ -1,5 +1,5 @@
 use anyhow::bail;
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone)]
 pub(crate) enum Day {
@@ -42,5 +42,20 @@ impl FromStr for Day {
 impl From<Day> for u8 {
     fn from(value: Day) -> Self {
         value as u8 + 1
+    }
+}
+
+impl Display for Day {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let day = match self {
+            Day::Monday => "Monday",
+            Day::Tuesday => "Tuesday",
+            Day::Wednesday => "Wednesday",
+            Day::Thursday => "Thursday",
+            Day::Friday => "Friday",
+            Day::Saturday => "Saturday",
+            Day::Sunday => "Sunday",
+        };
+        write!(f, "{day}")
     }
 }
