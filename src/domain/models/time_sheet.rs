@@ -1,0 +1,34 @@
+use super::hours::Hours;
+
+pub(crate) struct Week {
+    pub(crate) monday: Hours,
+    pub(crate) tuesday: Hours,
+    pub(crate) wednesday: Hours,
+    pub(crate) thursday: Hours,
+    pub(crate) friday: Hours,
+    pub(crate) saturday: Hours,
+    pub(crate) sunday: Hours,
+}
+
+pub(crate) struct Line {
+    pub(crate) job: String,
+    pub(crate) task: String,
+    pub(crate) week: Week,
+}
+
+impl Line {
+    pub(crate) fn new(job: String, task: String, week: Week) -> Self {
+        Self { job, task, week }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct TimeSheet {
+    pub(crate) lines: Vec<Line>,
+}
+
+impl TimeSheet {
+    pub(crate) fn new(lines: Vec<Line>) -> Self {
+        Self { lines }
+    }
+}

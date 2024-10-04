@@ -1,4 +1,4 @@
-use crate::infrastructure::models::time_registration;
+use crate::domain::models::time_sheet::{Line, TimeSheet};
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 use tabled::settings::{
@@ -45,18 +45,18 @@ fn display_hours(hours: &f32) -> impl Display {
     format!("{whole_hours}:{minutes:02}")
 }
 
-impl<'a> From<&'a time_registration::TableRecord> for Row<'a> {
-    fn from(record: &'a time_registration::TableRecord) -> Self {
+impl<'a> From<&'a Line> for Row<'a> {
+    fn from(line: &'a Line) -> Self {
         Row {
-            job_name: &record.data.jobnamevar,
-            task_name: &record.data.tasktextvar,
-            monday: record.data.numberday1,
-            tuesday: record.data.numberday2,
-            wednesday: record.data.numberday3,
-            thursday: record.data.numberday4,
-            friday: record.data.numberday5,
-            saturday: record.data.numberday6,
-            sunday: record.data.numberday7,
+            job_name: &line.job,
+            task_name: &line.task,
+            monday: line.week.monday.0,
+            tuesday: line.week.tuesday.0,
+            wednesday: line.week.wednesday.0,
+            thursday: line.week.thursday.0,
+            friday: line.week.friday.0,
+            saturday: line.week.saturday.0,
+            sunday: line.week.sunday.0,
         }
     }
 }
@@ -75,9 +75,9 @@ fn gray_borders() -> BorderColor {
         .corner_top_right(gray.clone())
 }
 
-impl Display for time_registration::TimeRegistration {
+impl Display for TimeSheet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let rows = self.panes.table.records.iter().map(Row::from);
+        let rows = self.lines.iter().map(Row::from);
 
         let mut theme = Theme::from_style(Style::modern_rounded());
         theme.remove_vertical_lines();

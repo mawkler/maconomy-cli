@@ -1,5 +1,8 @@
 use super::maconomy_http_client::{ConcurrencyControl, ContainerInstance, MaconomyHttpClient};
-use crate::infrastructure::models::time_registration::TimeRegistration;
+use crate::{
+    domain::models::time_sheet::{Line, TimeSheet, Week},
+    infrastructure::models::time_registration::{TableRecord, TimeRegistration},
+};
 use anyhow::{anyhow, Context, Result};
 use log::info;
 
@@ -41,7 +44,12 @@ impl TimeRegistrationRepository {
     }
 
     // TODO: perhaps rename to `get_week` or something like that?
-    pub(crate) async fn get_time_registration(&mut self) -> Result<TimeRegistration> {
+    /// Gets and caches time registration
+    pub(crate) async fn get_time_registration(&mut self) -> Result<TimeSheet> {
+        if let Some(time_registration) = &self.time_registration {
+            return Ok(time_registration.clone().into());
+        }
+
         let container_instance = self
             .get_container_instance()
             .await
@@ -55,7 +63,7 @@ impl TimeRegistrationRepository {
         self.update_concurrency_control(concurrency_control);
         self.time_registration = Some(time_registration.clone());
 
-        Ok(time_registration)
+        Ok(time_registration.into())
     }
 
     pub(crate) async fn set_time(&mut self, hours: f32, day: u8, row: u8) -> Result<()> {
@@ -86,5 +94,35 @@ impl TimeRegistrationRepository {
         );
 
         container_instance.concurrency_control = concurrency_control;
+    }
+}
+
+impl From<TableRecord> for Line {
+    fn from(table_record: TableRecord) -> Self {
+        let data = table_record.data;
+        let week = Week {
+            monday: data.numberday1.into(),
+            tuesday: data.numberday2.into(),
+            wednesday: data.numberday3.into(),
+            thursday: data.numberday4.into(),
+            friday: data.numberday5.into(),
+            saturday: data.numberday6.into(),
+            sunday: data.numberday7.into(),
+        };
+
+        Line::new(data.jobnamevar, data.taskname, week)
+    }
+}
+
+impl From<TimeRegistration> for TimeSheet {
+    fn from(time_registration: TimeRegistration) -> Self {
+        let lines: Vec<_> = time_registration
+            .panes
+            .table
+            .records
+            .into_iter()
+            .map(Line::from)
+            .collect();
+        Self::new(lines)
     }
 }
