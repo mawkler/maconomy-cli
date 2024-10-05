@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
 
     let config = Configuration::new();
     let url = config.get_value("maconomy_url")?;
-    let company_name = config.get_value("company")?;
+    let company_name = config.get_value("company_id")?;
 
     let login_url = config.get_value("authentication.sso.login_url")?;
     let auth_service = AuthService::new(login_url);
