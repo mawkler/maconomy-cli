@@ -36,9 +36,9 @@ async fn main() -> Result<()> {
         Command::Set {
             hours,
             day,
-            job: _,
-            task: _,
-        } => commands::set(hours, day, &mut repository).await?,
+            job,
+            task,
+        } => commands::set(hours, day, &job, &task, &mut repository).await?,
         Command::Add {
             hours: _,
             job: _,

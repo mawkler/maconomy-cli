@@ -1,4 +1,4 @@
-use super::hours::Hours;
+use super::{day::Day, hours::Hours};
 
 pub(crate) struct Week {
     pub(crate) monday: Hours,
@@ -30,5 +30,17 @@ pub(crate) struct TimeSheet {
 impl TimeSheet {
     pub(crate) fn new(lines: Vec<Line>) -> Self {
         Self { lines }
+    }
+}
+
+impl TimeSheet {
+    pub(crate) fn find_line_nr(&self, job: &str, task: &str, day: &Day) -> Option<u8> {
+        let (row, _) = self
+            .lines
+            .iter()
+            .enumerate()
+            .find(|(_, line)| line.job == job && line.task == task)?;
+
+        Some(row as u8)
     }
 }

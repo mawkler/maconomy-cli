@@ -1,6 +1,9 @@
 use super::maconomy_http_client::{ConcurrencyControl, ContainerInstance, MaconomyHttpClient};
 use crate::{
-    domain::models::time_sheet::{Line, TimeSheet, Week},
+    domain::models::{
+        day::Day,
+        time_sheet::{Line, TimeSheet, Week},
+    },
     infrastructure::models::time_registration::{TableRecord, TimeRegistration},
 };
 use anyhow::{anyhow, Context, Result};
@@ -48,10 +51,7 @@ impl TimeSheetRepository {
             return Ok(time_registration.clone().into());
         }
 
-        let container_instance = self
-            .get_container_instance()
-            .await
-            .context("Failed to get container instance")?;
+        let container_instance = self.get_container_instance().await?;
         let (time_registration, concurrency_control) = self
             .client
             .get_time_registration(container_instance)
@@ -64,21 +64,29 @@ impl TimeSheetRepository {
         Ok(time_registration.into())
     }
 
-    pub(crate) async fn set_time(&mut self, hours: f32, day: u8, row: u8) -> Result<()> {
+    pub(crate) async fn set_time(
+        &mut self,
+        hours: f32,
+        day: Day,
+        job: &str,
+        task: &str,
+    ) -> Result<()> {
         // We need to get the time sheet before we can set any data
-        let _ = self
+        let time_sheet = self
             .get_time_sheet()
             .await
             .context("Failed to get time sheet")?;
 
-        let container_instance = self
-            .get_container_instance()
-            .await
-            .context("Failed to get container instance")?;
+        let container_instance = self.get_container_instance().await?;
+
+        let row = time_sheet.find_line_nr(job, task, &day).context(format!(
+            "Line with job {job} and task {task} not found. Maconomy CLI doesn't yet support \
+            adding new lines."
+        ))?;
 
         let concurrency_control = self
             .client
-            .set_time(hours, day, row, container_instance)
+            .set_time(hours, day.clone().into(), row, container_instance)
             .await
             .with_context(|| format!("Failed to set {hours} hours on day {day}, row {row}"))?;
 

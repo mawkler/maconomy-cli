@@ -21,10 +21,10 @@ pub(crate) async fn get(service: &mut TimeSheetRepository) -> Result<()> {
 pub(crate) async fn set(
     hours: f32,
     day: Option<Day>,
+    job: &str,
+    task: &str,
     repository: &mut TimeSheetRepository,
 ) -> Result<()> {
-    let row = 0; // TODO: allow specifying row (i.e. job + task)
-
     let day: Day = if let Some(day) = day {
         day
     } else {
@@ -35,9 +35,9 @@ pub(crate) async fn set(
     };
 
     repository
-        .set_time(hours, day.clone().into(), row)
+        .set_time(hours, day.clone(), job, task)
         .await
-        .context(format!("Failed to set {hours} hours on {day}, row {row}"))?;
+        .with_context(|| format!("Failed to set {hours} hours on {day}, job {job}, task {task}"))?;
 
     info!("time sheet successfully set: {hours} hours on {day}");
 
