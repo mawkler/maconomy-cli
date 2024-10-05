@@ -57,6 +57,9 @@ pub enum Command {
         #[arg(short, long)]
         day: Option<Day>,
     },
+
+    /// Log out
+    Logout,
 }
 
 #[derive(Parser, Debug)]

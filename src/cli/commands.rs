@@ -1,6 +1,8 @@
 use crate::{
     domain::{models::day::Day, time_sheet_service::TimeSheetService},
-    infrastructure::repositories::time_sheet_repository::TimeSheetRepository,
+    infrastructure::{
+        auth_service::AuthService, repositories::time_sheet_repository::TimeSheetRepository,
+    },
 };
 use anyhow::{Context, Result};
 use chrono::{Datelike, Local};
@@ -54,4 +56,8 @@ pub(crate) async fn clear(
 ) -> Result<()> {
     let day = get_day(day)?;
     service.clear(job, task, &day).await
+}
+
+pub(crate) fn logout() -> Result<()> {
+    AuthService::logout().context("Logout failed")
 }

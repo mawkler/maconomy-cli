@@ -50,5 +50,6 @@ async fn main() -> Result<()> {
         Command::Clear { job, task, day } => {
             commands::clear(&job, &task, day, &mut time_sheet_service).await
         }
+        Command::Logout => commands::logout(),
     }
 }

@@ -5,9 +5,9 @@ use chromiumoxide::page::Page;
 use futures::StreamExt;
 use log::info;
 use serde::Deserialize;
-use std::env;
 use std::fmt::Display;
 use std::io::BufReader;
+use std::{env, fs};
 use std::{fs::File, io::Write, time::Duration};
 
 const COOKIE_NAME_PREFIX: &str = "Maconomy-";
@@ -100,6 +100,10 @@ impl AuthService {
         let _ = handle.await;
 
         Ok(auth_cookie)
+    }
+
+    pub(crate) fn logout() -> Result<()> {
+        fs::remove_file(get_cookie_path()?).context("Failed to remove auth cookie")
     }
 }
 
