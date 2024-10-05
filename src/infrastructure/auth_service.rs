@@ -5,12 +5,12 @@ use chromiumoxide::page::Page;
 use futures::StreamExt;
 use log::info;
 use serde::Deserialize;
+use std::env;
 use std::fmt::Display;
 use std::io::BufReader;
 use std::{fs::File, io::Write, time::Duration};
 
 const COOKIE_NAME_PREFIX: &str = "Maconomy-";
-const COOKIE_FILE_NAME: &str = "maconomy_cookie";
 const TIMEOUT: Duration = Duration::from_secs(300);
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 
@@ -103,6 +103,13 @@ impl AuthService {
     }
 }
 
+fn get_cookie_path() -> Result<String> {
+    let home = env::var("HOME")
+        .with_context(|| "Could not find home directory. $HOME system variable isn't set")?;
+    let cookie_path = format!("{home}/.local/share/maconomy-cli/maconomy_cookie");
+    Ok(cookie_path)
+}
+
 fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
     // TODO: use `Serialize` instead
     let cookie = serde_json::json!({
@@ -111,8 +118,7 @@ fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
     })
     .to_string();
 
-    // TODO: move to ~/.local/share/maconomy-cli/
-    let mut file = File::create(COOKIE_FILE_NAME).context("Failed to create cookie file")?;
+    let mut file = File::create(get_cookie_path()?).context("Failed to create cookie file")?;
     file.write_all(cookie.as_bytes())
         .context("Failed to write cookie to file")?;
 
@@ -121,7 +127,7 @@ fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
 
 // TODO: change Result to a cleaner type that is NotFound or Other
 fn read_cookie_from_file() -> Result<Option<AuthCookie>> {
-    let file = match File::open(COOKIE_FILE_NAME) {
+    let file = match File::open(get_cookie_path()?) {
         Ok(file) => file,
         Err(_) => return Ok(None),
     };
