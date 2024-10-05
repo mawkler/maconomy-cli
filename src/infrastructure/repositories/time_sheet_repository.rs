@@ -67,7 +67,7 @@ impl TimeSheetRepository {
     pub(crate) async fn set_time(
         &mut self,
         hours: f32,
-        day: Day,
+        day: &Day,
         job: &str,
         task: &str,
     ) -> Result<()> {
@@ -79,7 +79,7 @@ impl TimeSheetRepository {
 
         let container_instance = self.get_container_instance().await?;
 
-        let row = time_sheet.find_line_nr(job, task, &day).context(format!(
+        let row = time_sheet.find_line_nr(job, task, day).context(format!(
             "Line with job {job} and task {task} not found. Maconomy CLI doesn't yet support \
             adding new lines."
         ))?;

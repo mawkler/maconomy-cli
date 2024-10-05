@@ -1,22 +1,16 @@
-use std::str::FromStr;
-
+use crate::domain::models::day::Day;
 use clap::{Parser, Subcommand};
-
-use crate::domain::models::day::{self, Day};
+use std::str::FromStr;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Get time
-    Get { date: Option<String> },
+    Get { week: Option<u32> },
 
     Set {
         // TODO: change to string that allows "4:30" hours, etc.
         /// Number of hours to set
         hours: f32,
-
-        /// Day of the week
-        #[arg(short, long, value_parser = |s: &str| Day::from_str(s))]
-        day: Option<day::Day>,
 
         /// Job
         #[arg(short, long)]
@@ -25,6 +19,10 @@ pub enum Command {
         /// Task
         #[arg(long)]
         task: String,
+
+        /// Day of the week
+        #[arg(short, long, value_parser = |s: &str| Day::from_str(s))]
+        day: Option<Day>,
     },
 
     /// Add time
@@ -41,9 +39,23 @@ pub enum Command {
         #[arg(long)]
         task: String,
 
-        /// Date
+        /// Day of the week
         #[arg(short, long)]
-        date: Option<String>,
+        day: Option<String>,
+    },
+
+    Clear {
+        /// Job
+        #[arg(short, long)]
+        job: String,
+
+        /// Task
+        #[arg(long)]
+        task: String,
+
+        /// Day of the week
+        #[arg(short, long)]
+        day: Option<Day>,
     },
 }
 

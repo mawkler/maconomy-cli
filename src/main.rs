@@ -1,8 +1,9 @@
 use anyhow::Context;
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use cli::arguments::{parse_arguments, Command};
 use cli::commands;
 use config::Configuration;
+use domain::time_sheet_service::TimeSheetService;
 use infrastructure::repositories::maconomy_http_client::MaconomyHttpClient;
 use infrastructure::repositories::time_sheet_repository::TimeSheetRepository;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
@@ -30,22 +31,24 @@ async fn main() -> Result<()> {
 
     let client = MaconomyHttpClient::new(url, company_name, client, http_service);
     let mut repository = TimeSheetRepository::new(client);
+    let mut time_sheet_service = TimeSheetService::new(&mut repository);
 
     match parse_arguments() {
-        Command::Get { date: _ } => commands::get(&mut repository).await?,
+        Command::Get { week: _ } => commands::get(&mut repository).await,
         Command::Set {
             hours,
             day,
             job,
             task,
-        } => commands::set(hours, day, &job, &task, &mut repository).await?,
+        } => commands::set(hours, day, &job, &task, &mut repository).await,
         Command::Add {
             hours: _,
             job: _,
             task: _,
-            date: _,
+            day: _,
         } => todo!(),
-    };
-
-    Ok(())
+        Command::Clear { job, task, day } => {
+            commands::clear(&job, &task, day, &mut time_sheet_service).await
+        }
+    }
 }
