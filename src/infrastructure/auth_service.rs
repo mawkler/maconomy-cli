@@ -3,7 +3,7 @@ use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::network::Cookie;
 use chromiumoxide::page::Page;
 use futures::StreamExt;
-use log::info;
+use log::{debug, info};
 use serde::Deserialize;
 use std::fmt::Display;
 use std::io::BufReader;
@@ -61,7 +61,9 @@ impl AuthService {
         }
 
         info!("Cookie file not found, opening browser");
-        self.reauthenticate().await
+        self.reauthenticate()
+            .await
+            .context("Failed to reauthenticate")
     }
 
     pub(crate) async fn reauthenticate(&self) -> Result<AuthCookie> {
@@ -76,7 +78,10 @@ impl AuthService {
         let config = BrowserConfig::builder()
             .with_head()
             .build()
-            .map_err(|err| anyhow!("Failed to create browser config: {err}"))?;
+            .map_err(|err| {
+                debug!("Failed to create browser config: {err}");
+                anyhow!("Failed to create browser config. Please make sure that you have either Chromium or Google Chrome installed")
+            })?;
         let (mut browser, mut handler) = Browser::launch(config)
             .await
             .context("Failed to launch web browser")?;
