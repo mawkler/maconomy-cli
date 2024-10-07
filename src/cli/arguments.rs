@@ -4,56 +4,45 @@ use std::str::FromStr;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Get time
-    Get { week: Option<u32> },
+    /// Get the time sheet for the current week
+    Get {
+        /// Week number (NOT YET SUPPORTED)
+        #[arg(short, long)]
+        week: Option<u8>,
+    },
 
+    /// Set number of hours on some day for a given job and task
     Set {
         // TODO: change to string that allows "4:30" hours, etc.
         /// Number of hours to set
         hours: f32,
 
-        /// Job
+        /// Name of the job
         #[arg(short, long)]
         job: String,
 
-        /// Task
+        /// Name of the task
         #[arg(long)]
         task: String,
 
-        /// Day of the week
+        /// Day of the week, for example "tuesday"
+        ///
+        /// Will default to today if omitted
         #[arg(short, long, value_parser = |s: &str| Day::from_str(s))]
         day: Option<Day>,
     },
 
-    /// Add time
-    Add {
-        /// Amount of time
-        #[arg(short, long)]
-        hours: u8,
-
-        /// Job
-        #[arg(short, long)]
-        job: String,
-
-        /// Task
-        #[arg(long)]
-        task: String,
-
-        /// Day of the week
-        #[arg(short, long)]
-        day: Option<String>,
-    },
-
+    /// Remove hours hours on some day for a given job and task
     Clear {
-        /// Job
+        /// Name of the job
         #[arg(short, long)]
         job: String,
 
-        /// Task
+        /// Name of the task
         #[arg(long)]
         task: String,
 
-        /// Day of the week
+        /// Day of the week, for example "tuesday"
         #[arg(short, long)]
         day: Option<Day>,
     },
@@ -63,7 +52,19 @@ pub enum Command {
 }
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None, arg_required_else_help = true)]
+#[command(
+    author = "Melker Ulander",
+    about,
+    version,
+    arg_required_else_help = true,
+    after_help = "\x1b[1m\x1b[4mExamples:\x1b[0m\
+    \n  maconomy get \
+    \n  maconomy set --job '<job name>' --task '<task name>' --day tuesday 8 \
+    \n  maconomy clear --job '<job name>' --task '<task name>' \
+    \n\
+    \nNOTE: currently you can only interact with the current week. In the future you'll be able to specify any week.
+    "
+)]
 pub struct Args {
     #[command(subcommand)]
     pub command: Command,

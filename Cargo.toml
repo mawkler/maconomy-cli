@@ -2,7 +2,11 @@
 name = "maconomy-cli"
 version = "0.1.0"
 edition = "2021"
-description = "Maconomy command-line interface"
+description = "Maconomy command-line interface for interacting with time sheets"
+
+[[bin]]
+name = "maconomy"
+path = "src/main.rs"
 
 # [lints.rust]
 # dead_code = "allow"

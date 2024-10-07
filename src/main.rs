@@ -34,19 +34,13 @@ async fn main() -> Result<()> {
     let mut time_sheet_service = TimeSheetService::new(&mut repository);
 
     match parse_arguments() {
-        Command::Get { week: _ } => commands::get(&mut repository).await,
+        Command::Get { week } => commands::get(week, &mut repository).await,
         Command::Set {
             hours,
             day,
             job,
             task,
         } => commands::set(hours, day, &job, &task, &mut repository).await,
-        Command::Add {
-            hours: _,
-            job: _,
-            task: _,
-            day: _,
-        } => todo!(),
         Command::Clear { job, task, day } => {
             commands::clear(&job, &task, day, &mut time_sheet_service).await
         }

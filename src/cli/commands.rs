@@ -9,7 +9,11 @@ use chrono::{Datelike, Local};
 use log::info;
 
 // TODO: allow setting week
-pub(crate) async fn get(repository: &mut TimeSheetRepository) -> Result<()> {
+pub(crate) async fn get(week: Option<u8>, repository: &mut TimeSheetRepository) -> Result<()> {
+    if week.is_some() {
+        panic!("--week flag is not yet supported")
+    }
+
     let time_sheet = repository
         .get_time_sheet()
         .await
