@@ -63,6 +63,10 @@ login_url = "<URL to your company's SSO login web page for Maconomy>"
 
 ## Known issues
 
+### "Line ... not found"
+
+maconomy-cli can currently not create new lines in the time sheet. This means that if the job + task combination specified doesn't have a line in the time sheet (I.e. doesn't appear in `maconomy get`), maconomy-cli can't currently set a value in it. Until this has been implemented, you'll have to manually press the `Add Time Sheet Line` button in your web browser.
+
 ### "Request failed with status 401 Unauthorized"
 
 Sometimes maconomy-cli is unable reauthenticate after your session has expired. maconomy-cli currently authenticates you by opening a browser window, letting you sign in with single-sign on, and then stores your session cookie. It seems like it sometimes it fetches the incorrect authentication cookie. I'll try to fix this, but the optimal solution is to switch to a proper [PKCE](https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow-with-pkce) authentication flow, or similar.

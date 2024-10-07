@@ -81,7 +81,8 @@ impl TimeSheetRepository {
 
         let row = time_sheet.find_line_nr(job, task).context(format!(
             "Line with job {job} and task {task} not found. Maconomy CLI doesn't yet support \
-            adding new lines."
+            adding new lines. Until this has been implemented you'll have to create the line \
+            manually from your web browser"
         ))?;
 
         let concurrency_control = self
