@@ -7,6 +7,18 @@ Maconomy command-line interface for interacting with time sheets.
 
 ## Usage
 
+```
+> maconomy set --job 'Some Company' --task 'Development' --day friday 8
+> maconomy get
+╭────────────────────────────────────────────────────────────────────╮
+│ Job name      Task name         Mon  Tue  Wed  Thu  Fri   Sat  Sun │
+├────────────────────────────────────────────────────────────────────┤
+│ Some Company  Development                           8:00           │
+├────────────────────────────────────────────────────────────────────┤
+│ Some Company  More development                                     │
+╰────────────────────────────────────────────────────────────────────╯
+```
+
 Output of `maconomy --help`:
 
 ```
