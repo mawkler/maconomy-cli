@@ -81,7 +81,7 @@ maconomy-cli can currently not create new lines in the time sheet. This means th
 
 ### "Request failed with status 401 Unauthorized"
 
-Sometimes maconomy-cli is unable reauthenticate after your session has expired. maconomy-cli currently authenticates you by opening a browser window, letting you sign in with single-sign on, and then stores your session cookie. It seems like it sometimes it fetches the incorrect authentication cookie. I'll try to fix this, but the optimal solution is to switch to a proper [PKCE](https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow-with-pkce) authentication flow, or similar.
+Sometimes maconomy-cli is unable reauthenticate after your session has expired. maconomy-cli currently authenticates you by opening a browser window, letting you sign in with single-sign on, and then stores your session cookie. It seems like it sometimes it fetches the incorrect authentication cookie. I'll try to fix this, but the optimal solution is to switch to a proper [PKCE](https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow-with-pkce) authentication flow, or similar. However, Maconomy seem to be using some custom authentication on top of SSO that I couldn't get working. That's why I went with the jankier web-browser-cookie-snatching solution.
 
 ## Development
 
