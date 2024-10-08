@@ -1,9 +1,6 @@
 @company = your_company_name
 @company = your_base_url
 
-# @prompt username
-# @prompt password
-
 # Get instances (to get concurrency control and container instance ID needed for next request)
 POST {{base_url}}/containers/{{company}}/timeregistration/instances
 Authorization: X-Cookie {{cookie_name}}
