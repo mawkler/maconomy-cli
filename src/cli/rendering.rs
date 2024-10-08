@@ -85,7 +85,6 @@ impl Display for TimeSheet {
         let mut table = tabled::Table::new(rows);
         let table = table
             .with(theme)
-            .with(BorderColor::new().top(Color::FG_GREEN))
             .with(Colorization::exact(
                 [tabled::settings::Color::BOLD],
                 Rows::first(),
