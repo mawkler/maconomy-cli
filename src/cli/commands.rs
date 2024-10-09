@@ -62,6 +62,6 @@ pub(crate) async fn clear(
     service.clear(job, task, &day).await
 }
 
-pub(crate) fn logout() -> Result<()> {
-    AuthService::logout().context("Logout failed")
+pub(crate) async fn logout(auth_service: &AuthService) -> Result<()> {
+    auth_service.logout().await.context("Logout failed")
 }

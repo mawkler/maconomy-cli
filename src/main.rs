@@ -7,6 +7,7 @@ use domain::time_sheet_service::TimeSheetService;
 use infrastructure::repositories::maconomy_http_client::MaconomyHttpClient;
 use infrastructure::repositories::time_sheet_repository::TimeSheetRepository;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
+use std::rc::Rc;
 
 mod cli;
 mod config;
@@ -22,8 +23,8 @@ async fn main() -> Result<()> {
     let company_name = config.get_value("company_id")?;
 
     let login_url = config.get_value("authentication.sso.login_url")?;
-    let auth_service = AuthService::new(login_url);
-    let http_service = HttpService::new(auth_service);
+    let auth_service = Rc::from(AuthService::new(login_url));
+    let http_service = HttpService::new(auth_service.clone());
     let client = reqwest::Client::builder()
         .cookie_store(true)
         .build()
@@ -44,6 +45,6 @@ async fn main() -> Result<()> {
         Command::Clear { job, task, day } => {
             commands::clear(&job, &task, day, &mut time_sheet_service).await
         }
-        Command::Logout => commands::logout(),
+        Command::Logout => commands::logout(&auth_service.clone()).await,
     }
 }

@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
 use super::auth_service::{AuthCookie, AuthService};
 use anyhow::{bail, Context, Result};
 use log::debug;
 use reqwest::StatusCode;
 
 pub struct HttpService {
-    auth_service: AuthService,
+    auth_service: Rc<AuthService>,
 }
 
 async fn send_with_cookie(
@@ -21,7 +23,7 @@ async fn send_with_cookie(
 }
 
 impl HttpService {
-    pub(crate) fn new(auth_service: AuthService) -> Self {
+    pub(crate) fn new(auth_service: Rc<AuthService>) -> Self {
         Self { auth_service }
     }
 

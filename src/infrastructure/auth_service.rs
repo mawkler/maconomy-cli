@@ -1,12 +1,12 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::network::Cookie;
 use chromiumoxide::page::Page;
 use futures::StreamExt;
-use log::{debug, info};
+use log::{debug, error, info};
 use serde::Deserialize;
 use std::fmt::Display;
-use std::io::BufReader;
+use std::io::{self, BufReader};
 use std::{env, fs};
 use std::{fs::File, io::Write, time::Duration};
 
@@ -60,7 +60,7 @@ impl AuthService {
             return Ok(cookie.clone());
         }
 
-        info!("Cookie file not found, opening browser");
+        info!("Cookie file not found, attempting to reauthenticate");
         self.reauthenticate()
             .await
             .context("Failed to reauthenticate")
@@ -75,17 +75,7 @@ impl AuthService {
     }
 
     async fn open_browser_and_authenticate(&self) -> Result<Cookie> {
-        let config = BrowserConfig::builder()
-            .with_head()
-            .build()
-            .map_err(|err| {
-                debug!("Failed to create browser config: {err}");
-                anyhow!("Failed to create browser config. Please make sure that you have either Chromium or Google Chrome installed")
-            })?;
-        let (mut browser, mut handler) = Browser::launch(config)
-            .await
-            .context("Failed to launch web browser")?;
-
+        let (mut browser, mut handler) = Self::launch_browser(true).await?;
         let handle = tokio::task::spawn(async move {
             while let Some(h) = handler.next().await {
                 if h.is_err() {
@@ -101,14 +91,55 @@ impl AuthService {
 
         let auth_cookie = wait_for_auth_cookie(&page).await?;
 
-        browser.close().await?;
+        browser.close().await.context("Failed to close browser")?;
         let _ = handle.await;
 
         Ok(auth_cookie)
     }
 
-    pub(crate) fn logout() -> Result<()> {
-        fs::remove_file(get_cookie_path()?).context("Failed to remove auth cookie")
+    async fn launch_browser(
+        with_head: bool,
+    ) -> Result<(chromiumoxide::Browser, chromiumoxide::Handler)> {
+        let mut builder = BrowserConfig::builder();
+        if with_head {
+            debug!("Configuring browser with head");
+            builder = builder.with_head();
+        } else {
+            debug!("Configuring browser with no head");
+        }
+
+        let browser_config = match builder.build() {
+            Ok(config) => config,
+            Err(err) => {
+                error!("Failed to create browser config: {err}");
+                panic!("Failed to create browser config. Please make sure that you have either Chromium or Google Chrome installed")
+            }
+        };
+
+        Browser::launch(browser_config)
+            .await
+            .context("Failed to launch browser")
+    }
+
+    async fn clear_browser_cookies(&self) -> Result<()> {
+        let (browser, _) = Self::launch_browser(false).await?;
+        let _ = browser
+            .clear_cookies()
+            .await
+            .context("Failed to clear all browser cookies");
+        Ok(())
+    }
+
+    pub(crate) async fn logout(&self) -> Result<()> {
+        if let Err(err) = fs::remove_file(get_cookie_path()?) {
+            if err.kind() != io::ErrorKind::NotFound {
+                bail!("Failed to remove auth cookie: {err}");
+            }
+        };
+
+        self.clear_browser_cookies()
+            .await
+            .context("Failed to clear browser cookies")
     }
 }
 
