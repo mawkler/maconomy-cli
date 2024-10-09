@@ -27,3 +27,4 @@ env_logger = "0.11.5"
 tabled = {version = "0.16.0", features = ["ansi"]}
 owo-colors = "4"
 chrono = "0.4.38"
+color-print = "0.3.6"

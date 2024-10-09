@@ -1,5 +1,6 @@
 use crate::domain::models::day::Day;
 use clap::{Parser, Subcommand};
+use color_print::cformat;
 use std::str::FromStr;
 
 #[derive(Debug, Subcommand)]
@@ -57,13 +58,13 @@ pub enum Command {
     about,
     version,
     arg_required_else_help = true,
-    after_help = "\x1b[1m\x1b[4mExamples:\x1b[0m\
+    after_help = cformat!("<bold,underline>Examples:</bold,underline>\
     \n  maconomy get \
-    \n  maconomy set --job '<job name>' --task '<task name>' --day tuesday 8 \
-    \n  maconomy clear --job '<job name>' --task '<task name>' \
+    \n  maconomy set --job '<<job name>>' --task '<<task name>>' --day tuesday 8 \
+    \n  maconomy clear --job '<<job name>>' --task '<<task name>>' \
     \n\
-    \n\x1b[1m\x1b[4mNOTE:\x1b[0m currently you can only interact with the current week. In the future you'll be able to specify any week.
-    "
+    \n<bold,underline>NOTE:</bold,underline> currently you can only interact with the current week. In the future you'll be able to specify any week.
+    ")
 )]
 pub struct Args {
     #[command(subcommand)]
