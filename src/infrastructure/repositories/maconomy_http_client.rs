@@ -1,6 +1,9 @@
 use anyhow::{anyhow, bail, Context, Result};
 use log::debug;
-use reqwest::{header::HeaderMap, Client, RequestBuilder};
+use reqwest::{
+    header::{HeaderMap, USER_AGENT},
+    Client, RequestBuilder,
+};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -104,6 +107,7 @@ impl MaconomyHttpClient {
     }
 
     async fn send_request(&self, request: RequestBuilder) -> Result<reqwest::Response> {
+        let request = request.header(USER_AGENT, "Maconomy CLI");
         self.http_service
             .send_request_with_auth(request)
             .await
