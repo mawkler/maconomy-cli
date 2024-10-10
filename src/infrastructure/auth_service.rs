@@ -1,6 +1,6 @@
 use anyhow::{bail, Context, Result};
 use chromiumoxide::browser::{Browser, BrowserConfig};
-use chromiumoxide::cdp::browser_protocol::network::Cookie;
+use chromiumoxide::cdp::browser_protocol::network::{ClearBrowserCookiesParams, Cookie};
 use chromiumoxide::page::Page;
 use futures::StreamExt;
 use log::{debug, error, info};
@@ -122,11 +122,17 @@ impl AuthService {
     }
 
     async fn clear_browser_cookies(&self) -> Result<()> {
-        let (browser, _) = Self::launch_browser(false).await?;
+        let (browser, mut handler) = Self::launch_browser(false).await?;
+
+        tokio::spawn(async move { while (handler.next().await).is_some() {} });
         let _ = browser
-            .clear_cookies()
+            .new_page("about:blank")
             .await
-            .context("Failed to clear all browser cookies");
+            .context("Failed to create new page")?
+            .execute(ClearBrowserCookiesParams::default())
+            .await
+            .context("Failed to execute clearing of browser cookies")?;
+
         Ok(())
     }
 
