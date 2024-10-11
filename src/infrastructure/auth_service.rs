@@ -157,7 +157,6 @@ fn get_cookie_path() -> Result<String> {
 }
 
 fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
-    // TODO: use `Serialize` instead
     let cookie = serde_json::json!({
         "name": cookie.name,
         "value": cookie.value,

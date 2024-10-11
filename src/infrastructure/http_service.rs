@@ -49,14 +49,20 @@ impl HttpService {
                 .await
                 .context("Failed to reauthenticate")?;
 
-            let status = response.status();
-
             let response = send_with_cookie(&request, auth_cookie).await?;
-            if !response.status().is_success() {
+
+            let status = response.status();
+            if status.is_success() {
+                Ok(response)
+            } else if let StatusCode::UNAUTHORIZED = status {
+                panic!(
+                    "Failed to reauthenticate. Try logging out with `maconomy logout`, and \
+                    running your previous command again."
+                );
+            } else {
                 let body = response.text().await?;
-                bail!("Request failed with status {status}: {body}\nrequest: {request:?}")
+                bail!("Request failed with status {status}: {body}\nrequest: {request:?}");
             }
-            Ok(response)
         } else {
             let body = response
                 .text()
