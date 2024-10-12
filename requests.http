@@ -93,3 +93,13 @@ Cookie: {{cookie_name}}={{cookie_value}}
 
   capture_header('concurrency_control', 'maconomy-concurrency-control')
 %}
+
+###
+
+# Add time sheet line
+POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/inits?row=end
+Authorization: X-Cookie {{cookie_name}}
+Maconomy-Concurrency-Control: {{concurrency_control}}
+Cookie: {{cookie_name}}={{cookie_value}}
+Content-Length: 0
+Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
