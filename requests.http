@@ -109,6 +109,30 @@ Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
 
 ###
 
+@job_name=<job name here>
+
+# Get job number from job name
+POST https://me73379-webclient.deltekfirst.com/maconomy-api/containers/me73379/timeregistration/search/table;foreignkey=notblockedjobnumber_jobheader
+Authorization: X-Cookie {{cookie_name}}
+Cookie: {{cookie_name}}={{cookie_value}}
+Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
+Content-type: application/vnd.deltek.maconomy.containers+json; version=5.0
+
+{
+  "restriction": "(customernumber like '*{{job_name}}*' or jobnumber like '*{{job_name}}*' or jobname like '*{{job_name}}*' or name1 like '*{{job_name}}*')",
+  "fields": [
+    "jobnumber"
+  ]
+}
+
+# @lang=lua
+> {%
+  local job_number = vim.json.decode(response.body).panes.filter.records[1].data.jobnumber
+  client.global.set('job_number', job_number)
+%}
+
+###
+
 # Set new job and task on last row
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/?row=end
 Authorization: X-Cookie {{cookie_name}}
