@@ -9,7 +9,10 @@ use serde_json::json;
 
 use crate::infrastructure::{
     http_service::HttpService,
-    models::time_registration::{Meta, TimeRegistration},
+    models::{
+        search_response::SearchResponse,
+        time_registration::{Meta, TimeRegistration},
+    },
 };
 
 const MACONOMY_JSON_CONTENT_TYPE: &str = "application/vnd.deltek.maconomy.containers+json";
@@ -120,8 +123,8 @@ impl MaconomyHttpClient {
     ) -> Result<(TimeRegistration, ConcurrencyControl)> {
         let (url, company) = (&self.url, &self.company_name);
         let id = container_instance.id.0;
-        let concurrency_control = container_instance.concurrency_control.0;
         let url = format!("{url}/containers/{company}/timeregistration/instances/{id}/data;any");
+        let concurrency_control = container_instance.concurrency_control.0;
 
         let request = self
             .client
@@ -175,5 +178,48 @@ impl MaconomyHttpClient {
         }
 
         Ok(concurrency_control.into())
+    }
+
+    pub async fn get_job_number_from_name(&self, job_name: &str) -> Result<Option<String>> {
+        let (url, company) = (&self.url, &self.company_name);
+        let url = format!(
+        "{url}/containers/{company}/timeregistration/search/table;foreignkey=notblockedjobnumber_jobheader"
+    );
+
+        let restriction = format!(
+            "(customernumber like '*{job_name}*' \
+            or jobnumber like '*{job_name}*' \
+            or jobname like '*{job_name}*' \
+            or name1 like '*{job_name}*')"
+        );
+        let body = json!({
+            "restriction": restriction,
+            "fields": ["jobnumber"]
+        });
+
+        let request = self
+            .client
+            .post(url)
+            .header("Content-Type", MACONOMY_JSON_CONTENT_TYPE)
+            .body(body.to_string());
+
+        let response = self.send_request(request).await?;
+        let status = &response.status();
+        if !status.is_success() {
+            bail!("Server responded with {status}");
+        }
+
+        let body: SearchResponse = response
+            .json()
+            .await
+            .context("Failed to parse response body into SearchResponse")?;
+        let job_number = body
+            .panes
+            .filter
+            .records
+            .first()
+            .map(|record| record.data.jobnumber.clone());
+
+        Ok(job_number)
     }
 }
