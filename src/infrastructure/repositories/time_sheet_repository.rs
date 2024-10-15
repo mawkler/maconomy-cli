@@ -6,8 +6,8 @@ use crate::{
     },
     infrastructure::models::time_registration::{TableRecord, TimeRegistration},
 };
-use anyhow::{anyhow, Context, Result};
-use log::info;
+use anyhow::{anyhow, bail, Context, Result};
+use log::{debug, info};
 
 pub(crate) struct TimeSheetRepository {
     client: MaconomyHttpClient,
@@ -101,6 +101,41 @@ impl TimeSheetRepository {
         );
 
         container_instance.concurrency_control = concurrency_control;
+    }
+
+    pub async fn add_new_line(&mut self, job: &str, task: &str) -> Result<()> {
+        // We need to get the time sheet before we can create a new line for some reason
+        let _ = self
+            .get_time_sheet()
+            .await
+            .context("Failed to get time sheet")?;
+
+        debug!("Getting job number for job '{job}'");
+        let job_number = self
+            .client
+            .get_job_number_from_name(job)
+            .await
+            .context(format!("Could not get job number for job '{job}'"))?;
+
+        let Some(job_number) = job_number else {
+            bail!("Job '{job}' not found");
+        };
+        debug!("Got job number '{job_number}' for job '{job}'");
+
+        let container_instance = self.get_container_instance().await?;
+
+        debug!("Adding new row");
+        let (time_registration, concurrecy_control) = self
+            .client
+            .add_new_row(&job_number, task, container_instance)
+            .await
+            .context("Failed to add new row")?;
+
+        self.update_concurrency_control(concurrecy_control);
+        dbg!(&time_registration);
+        self.time_registration = Some(time_registration.clone());
+
+        Ok(())
     }
 }
 

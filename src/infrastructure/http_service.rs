@@ -3,7 +3,10 @@ use std::rc::Rc;
 use super::auth_service::{AuthCookie, AuthService};
 use anyhow::{bail, Context, Result};
 use log::debug;
-use reqwest::StatusCode;
+use reqwest::{
+    header::{AUTHORIZATION, COOKIE},
+    StatusCode,
+};
 
 pub struct HttpService {
     auth_service: Rc<AuthService>,
@@ -16,8 +19,8 @@ async fn send_with_cookie(
     let request = request
         .try_clone()
         .context("Failed to clone request")?
-        .header("Cookie", auth_cookie.to_string())
-        .header("Authorization", format!("X-Cookie {}", auth_cookie.name));
+        .header(COOKIE, auth_cookie.to_string())
+        .header(AUTHORIZATION, format!("X-Cookie {}", auth_cookie.name));
     debug!("Sending request {request:?}");
     request.send().await.context("Failed to send request")
 }

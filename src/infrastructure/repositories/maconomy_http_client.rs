@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use log::debug;
 use reqwest::{
-    header::{HeaderMap, USER_AGENT},
+    header::{HeaderMap, ACCEPT, CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT},
     Client, RequestBuilder,
 };
 use serde::Deserialize;
@@ -78,7 +78,7 @@ impl MaconomyHttpClient {
         let request = self
             .client
             .post(&url)
-            .header("Content-Type", MACONOMY_JSON_CONTENT_TYPE)
+            .header(CONTENT_TYPE, MACONOMY_JSON_CONTENT_TYPE)
             // Specifies the fields that we want from Maconomy
             .body(body);
         let response = self
@@ -130,16 +130,16 @@ impl MaconomyHttpClient {
             .client
             .post(url)
             .header("Maconomy-Concurrency-Control", concurrency_control)
-            .header("Content-length", "0");
+            .header(CONTENT_LENGTH, "0");
 
         let response = self.send_request(request).await?;
-        let concurrency_control = concurrency_control_from_headers(response.headers())?;
 
         let status = &response.status();
         if !status.is_success() {
             bail!("Server responded with {status}");
         }
 
+        let concurrency_control = concurrency_control_from_headers(response.headers())?;
         let time_registration = response.json().await.context("Failed to parse response")?;
         Ok((time_registration, concurrency_control.into()))
     }
@@ -166,7 +166,7 @@ impl MaconomyHttpClient {
             .client
             .post(url)
             .header("Maconomy-Concurrency-Control", concurrency_control)
-            .header("Content-Type", MACONOMY_JSON_CONTENT_TYPE)
+            .header(CONTENT_TYPE, MACONOMY_JSON_CONTENT_TYPE)
             .body(body.to_string());
 
         let response = self.send_request(request).await?;
@@ -188,9 +188,9 @@ impl MaconomyHttpClient {
 
         let restriction = format!(
             "(customernumber like '*{job_name}*' \
-            or jobnumber like '*{job_name}*' \
-            or jobname like '*{job_name}*' \
-            or name1 like '*{job_name}*')"
+                or jobnumber like '*{job_name}*' \
+                or jobname like '*{job_name}*' \
+                or name1 like '*{job_name}*')"
         );
         let body = json!({
             "restriction": restriction,
@@ -200,7 +200,7 @@ impl MaconomyHttpClient {
         let request = self
             .client
             .post(url)
-            .header("Content-Type", MACONOMY_JSON_CONTENT_TYPE)
+            .header(CONTENT_TYPE, MACONOMY_JSON_CONTENT_TYPE)
             .body(body.to_string());
 
         let response = self.send_request(request).await?;
@@ -209,11 +209,11 @@ impl MaconomyHttpClient {
             bail!("Server responded with {status}");
         }
 
-        let body: SearchResponse = response
+        let response_body: SearchResponse = response
             .json()
             .await
             .context("Failed to parse response body into SearchResponse")?;
-        let job_number = body
+        let job_number = response_body
             .panes
             .filter
             .records
@@ -221,5 +221,46 @@ impl MaconomyHttpClient {
             .map(|record| record.data.jobnumber.clone());
 
         Ok(job_number)
+    }
+
+    pub async fn add_new_row(
+        &self,
+        job_number: &str,
+        task_name: &str,
+        container_instance: ContainerInstance,
+    ) -> Result<(TimeRegistration, ConcurrencyControl)> {
+        let (url, company) = (&self.url, &self.company_name);
+        let id = container_instance.id.0;
+        let concurrency_control = container_instance.concurrency_control.0;
+        let url = format!(
+            "{url}/containers/{company}/timeregistration/instances/{id}/data/panes/table/?row=end"
+        );
+        let maconomy_json = "application/vnd.deltek.maconomy.containers+json; version=5.0";
+
+        let body = json!({
+            "data": {
+                "jobnumber": job_number,
+                "taskname": task_name
+            }
+        });
+
+        let request = self
+            .client
+            .post(url)
+            .header(ACCEPT, maconomy_json)
+            .header(CONTENT_TYPE, maconomy_json)
+            .header("Maconomy-Concurrency-Control", concurrency_control)
+            .body(body.to_string());
+
+        let response = self.send_request(request).await?;
+
+        let status = &response.status();
+        if !status.is_success() {
+            bail!("Server responded with {status}");
+        }
+
+        let concurrency_control = concurrency_control_from_headers(response.headers())?;
+        let time_registration = response.json().await.context("Failed to parse response")?;
+        Ok((time_registration, concurrency_control.into()))
     }
 }
