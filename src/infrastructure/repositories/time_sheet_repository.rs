@@ -64,6 +64,28 @@ impl TimeSheetRepository {
         Ok(time_registration.into())
     }
 
+    async fn get_or_create_line_number(&mut self, job: &str, task: &str) -> Result<u8> {
+        let time_sheet = self
+            .get_time_sheet()
+            .await
+            .context("Failed to get time sheet")?;
+        let line_number = match time_sheet.find_line_nr(job, task) {
+            Some(line_number) => line_number,
+            None => {
+                info!("Found no line for job {job}, task {task}. Creating new line for it");
+                let time_sheet = self.add_new_line(job, task).await.with_context(|| {
+                    format!("Failed to add new line to time sheet for job {job} and task {task}")
+                })?;
+
+                time_sheet
+                    .find_line_nr(job, task)
+                    .unwrap_or_else(|| panic!("Could not find job {job}, task {task} even after creating a new line for it"))
+            }
+        };
+
+        Ok(line_number)
+    }
+
     pub(crate) async fn set_time(
         &mut self,
         hours: f32,
@@ -71,25 +93,19 @@ impl TimeSheetRepository {
         job: &str,
         task: &str,
     ) -> Result<()> {
-        // We need to get the time sheet before we can set any data
-        let time_sheet = self
-            .get_time_sheet()
+        let line_number = self.get_or_create_line_number(job, task).await?;
+        let container_instance = self
+            .get_container_instance()
             .await
-            .context("Failed to get time sheet")?;
-
-        let container_instance = self.get_container_instance().await?;
-
-        let row = time_sheet.find_line_nr(job, task).context(format!(
-            "Line with job {job} and task {task} not found. Maconomy CLI doesn't yet support \
-            adding new lines. Until this has been implemented you'll have to create the line \
-            manually from your web browser"
-        ))?;
+            .context("Failed to get container instance")?;
 
         let concurrency_control = self
             .client
-            .set_time(hours, day.clone().into(), row, container_instance)
+            .set_time(hours, day.clone().into(), line_number, container_instance)
             .await
-            .with_context(|| format!("Failed to set {hours} hours on day {day}, row {row}"))?;
+            .with_context(|| {
+                format!("Failed to set {hours} hours on day {day}, row {line_number}")
+            })?;
 
         self.update_concurrency_control(concurrency_control);
         Ok(())
@@ -103,7 +119,7 @@ impl TimeSheetRepository {
         container_instance.concurrency_control = concurrency_control;
     }
 
-    pub async fn add_new_line(&mut self, job: &str, task: &str) -> Result<()> {
+    pub async fn add_new_line(&mut self, job: &str, task: &str) -> Result<TimeSheet> {
         // We need to get the time sheet before we can create a new line for some reason
         let _ = self
             .get_time_sheet()
@@ -135,7 +151,7 @@ impl TimeSheetRepository {
         dbg!(&time_registration);
         self.time_registration = Some(time_registration.clone());
 
-        Ok(())
+        Ok(time_registration.into())
     }
 }
 
