@@ -5,6 +5,7 @@ pub(crate) mod repositories {
     pub(crate) mod time_sheet_repository;
 }
 pub(crate) mod models {
-    pub(crate) mod search_response;
-    pub(crate) mod time_registration;
+    pub(super) mod search_response;
+    pub(super) mod taskname;
+    pub(super) mod time_registration;
 }

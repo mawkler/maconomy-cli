@@ -1,7 +1,13 @@
-use crate::domain::models::day::Day;
+use crate::domain::models::{day::Day, line_number::LineNumber};
 use clap::{Parser, Subcommand};
 use color_print::cformat;
 use std::str::FromStr;
+
+#[derive(Debug, Subcommand)]
+pub enum Line {
+    /// Delete line based on line number (1-indexed)
+    Delete { line_number: LineNumber },
+}
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
@@ -50,6 +56,10 @@ pub enum Command {
 
     /// Log out
     Logout,
+
+    /// Operate on entire lines in the time sheet
+    #[command(subcommand)]
+    Line(Line),
 }
 
 #[derive(Parser, Debug)]

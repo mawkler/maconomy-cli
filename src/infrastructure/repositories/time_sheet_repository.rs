@@ -2,9 +2,13 @@ use super::maconomy_http_client::{ConcurrencyControl, ContainerInstance, Maconom
 use crate::{
     domain::models::{
         day::Day,
+        line_number::LineNumber,
         time_sheet::{Line, TimeSheet, Week},
     },
-    infrastructure::models::time_registration::{TableRecord, TimeRegistration},
+    infrastructure::models::{
+        taskname::{self},
+        time_registration::{TableRecord, TimeRegistration},
+    },
 };
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info};
@@ -45,41 +49,50 @@ impl TimeSheetRepository {
         Ok(container_instance.clone())
     }
 
-    /// Gets and caches time sheet
-    pub(crate) async fn get_time_sheet(&mut self) -> Result<TimeSheet> {
-        if let Some(time_registration) = &self.time_registration {
-            return Ok(time_registration.clone().into());
-        }
-
+    async fn get_time_registration(&mut self) -> Result<TimeRegistration> {
         let container_instance = self.get_container_instance().await?;
         let (time_registration, concurrency_control) = self
             .client
-            .get_time_registration(container_instance)
+            .get_time_registration(&container_instance)
             .await
             .context("Failed to get time sheet")?;
 
         self.update_concurrency_control(concurrency_control);
         self.time_registration = Some(time_registration.clone());
 
+        Ok(time_registration)
+    }
+
+    /// Gets and caches time sheet
+    pub(crate) async fn get_time_sheet(&mut self) -> Result<TimeSheet> {
+        if let Some(time_registration) = &self.time_registration {
+            return Ok(time_registration.clone().into());
+        }
+
+        let time_registration = self.get_time_registration().await?;
+
         Ok(time_registration.into())
     }
 
-    async fn get_or_create_line_number(&mut self, job: &str, task: &str) -> Result<u8> {
-        let time_sheet = self
-            .get_time_sheet()
-            .await
-            .context("Failed to get time sheet")?;
+    async fn get_or_create_line_number(
+        &mut self,
+        job: &str,
+        task: &str,
+        time_sheet: &TimeSheet,
+    ) -> Result<u8> {
         let line_number = match time_sheet.find_line_nr(job, task) {
             Some(line_number) => line_number,
             None => {
-                info!("Found no line for job {job}, task {task}. Creating new line for it");
-                let time_sheet = self.add_new_line(job, task).await.with_context(|| {
-                    format!("Failed to add new line to time sheet for job {job} and task {task}")
+                info!("Found no line for job '{job}', task '{task}'. Creating new line for it");
+                let time_sheet = self.add_line(job, task).await.with_context(|| {
+                    format!(
+                        "Failed to add new line to time sheet for job '{job}' and task '{task}'"
+                    )
                 })?;
 
                 time_sheet
                     .find_line_nr(job, task)
-                    .unwrap_or_else(|| panic!("Could not find job {job}, task {task} even after creating a new line for it"))
+                    .unwrap_or_else(|| panic!("Could not find job '{job}' and task '{task}', even after creating a new line for it"))
             }
         };
 
@@ -93,7 +106,14 @@ impl TimeSheetRepository {
         job: &str,
         task: &str,
     ) -> Result<()> {
-        let line_number = self.get_or_create_line_number(job, task).await?;
+        let time_sheet = self
+            .get_time_sheet()
+            .await
+            .context("Failed to get time sheet")?;
+
+        let line_number = self
+            .get_or_create_line_number(job, task, &time_sheet)
+            .await?;
         let container_instance = self
             .get_container_instance()
             .await
@@ -107,6 +127,7 @@ impl TimeSheetRepository {
                 format!("Failed to set {hours} hours on day {day}, row {line_number}")
             })?;
 
+        // TODO: also update self.time_registration
         self.update_concurrency_control(concurrency_control);
         Ok(())
     }
@@ -119,13 +140,7 @@ impl TimeSheetRepository {
         container_instance.concurrency_control = concurrency_control;
     }
 
-    pub async fn add_new_line(&mut self, job: &str, task: &str) -> Result<TimeSheet> {
-        // We need to get the time sheet before we can create a new line for some reason
-        let _ = self
-            .get_time_sheet()
-            .await
-            .context("Failed to get time sheet")?;
-
+    pub async fn add_line(&mut self, job: &str, task: &str) -> Result<TimeSheet> {
         debug!("Getting job number for job '{job}'");
         let job_number = self
             .client
@@ -139,19 +154,61 @@ impl TimeSheetRepository {
         debug!("Got job number '{job_number}' for job '{job}'");
 
         let container_instance = self.get_container_instance().await?;
+        let time_registration = self
+            .get_time_registration()
+            .await
+            .context("Failed to get time registration")?;
+
+        let task_name = taskname::short_task_name_from_full_task_name(task, time_registration)
+            .with_context(|| format!("Could not get the short task name for task '{task}'"))?;
 
         debug!("Adding new row");
         let (time_registration, concurrecy_control) = self
             .client
-            .add_new_row(&job_number, task, container_instance)
+            .add_new_row(&job_number, &task_name, container_instance)
             .await
             .context("Failed to add new row")?;
 
         self.update_concurrency_control(concurrecy_control);
-        dbg!(&time_registration);
         self.time_registration = Some(time_registration.clone());
 
         Ok(time_registration.into())
+    }
+
+    async fn get_number_of_lines(&mut self) -> Result<u8> {
+        let time_sheet = self.get_time_sheet().await?;
+        Ok(time_sheet.lines.len() as u8)
+    }
+
+    pub(crate) async fn delete_line(&mut self, line_number: &LineNumber) -> Result<()> {
+        // We need to get the time sheet before we can modify it
+        let _ = self
+            .get_time_sheet()
+            .await
+            .context("Failed to get time sheet")?;
+
+        // TODO: make line number 1 indexed
+        let line_number = match line_number {
+            LineNumber::Number(line_number) => *line_number,
+            LineNumber::Last => {
+                let last_line_number = self.get_number_of_lines().await?;
+                info!("Using line number {last_line_number} as last line number");
+                last_line_number
+            }
+        };
+
+        let container_instance = self.get_container_instance().await?;
+
+        let (time_registration, concurrecy_control) = self
+            .client
+            .delete_row(line_number - 1, container_instance)
+            .await
+            .with_context(|| format!("Failed to delete line number {line_number}"))?;
+
+        self.update_concurrency_control(concurrecy_control);
+        self.time_registration = Some(time_registration.clone());
+
+        Ok(())
     }
 }
 

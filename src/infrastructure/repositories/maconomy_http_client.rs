@@ -11,11 +11,15 @@ use crate::infrastructure::{
     http_service::HttpService,
     models::{
         search_response::SearchResponse,
+        taskname::ShortTaskName,
         time_registration::{Meta, TimeRegistration},
     },
 };
 
-const MACONOMY_JSON_CONTENT_TYPE: &str = "application/vnd.deltek.maconomy.containers+json";
+// Header values
+const MACONOMY_JSON: &str = "application/vnd.deltek.maconomy.containers+json";
+const MACONOMY_JSON_V5: &str = "application/vnd.deltek.maconomy.containers+json; version=5.0";
+const MACONOMY_CONCURRENCY_CONTROL: &str = "Maconomy-Concurrency-Control";
 
 #[derive(Clone, Debug)]
 pub(crate) struct ConcurrencyControl(pub(crate) String);
@@ -78,7 +82,7 @@ impl MaconomyHttpClient {
         let request = self
             .client
             .post(&url)
-            .header(CONTENT_TYPE, MACONOMY_JSON_CONTENT_TYPE)
+            .header(CONTENT_TYPE, MACONOMY_JSON)
             // Specifies the fields that we want from Maconomy
             .body(body);
         let response = self
@@ -119,17 +123,17 @@ impl MaconomyHttpClient {
 
     pub async fn get_time_registration(
         &self,
-        container_instance: ContainerInstance,
+        container_instance: &ContainerInstance,
     ) -> Result<(TimeRegistration, ConcurrencyControl)> {
         let (url, company) = (&self.url, &self.company_name);
-        let id = container_instance.id.0;
+        let id = &container_instance.id.0;
         let url = format!("{url}/containers/{company}/timeregistration/instances/{id}/data;any");
-        let concurrency_control = container_instance.concurrency_control.0;
+        let concurrency_control = &container_instance.concurrency_control.0;
 
         let request = self
             .client
             .post(url)
-            .header("Maconomy-Concurrency-Control", concurrency_control)
+            .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
             .header(CONTENT_LENGTH, "0");
 
         let response = self.send_request(request).await?;
@@ -144,6 +148,7 @@ impl MaconomyHttpClient {
         Ok((time_registration, concurrency_control.into()))
     }
 
+    // TODO: improve result type to include NotFound
     pub async fn set_time(
         &self,
         hours: f32,
@@ -165,8 +170,8 @@ impl MaconomyHttpClient {
         let request = self
             .client
             .post(url)
-            .header("Maconomy-Concurrency-Control", concurrency_control)
-            .header(CONTENT_TYPE, MACONOMY_JSON_CONTENT_TYPE)
+            .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
+            .header(CONTENT_TYPE, MACONOMY_JSON)
             .body(body.to_string());
 
         let response = self.send_request(request).await?;
@@ -200,7 +205,7 @@ impl MaconomyHttpClient {
         let request = self
             .client
             .post(url)
-            .header(CONTENT_TYPE, MACONOMY_JSON_CONTENT_TYPE)
+            .header(CONTENT_TYPE, MACONOMY_JSON)
             .body(body.to_string());
 
         let response = self.send_request(request).await?;
@@ -226,7 +231,7 @@ impl MaconomyHttpClient {
     pub async fn add_new_row(
         &self,
         job_number: &str,
-        task_name: &str,
+        task_name: &ShortTaskName,
         container_instance: ContainerInstance,
     ) -> Result<(TimeRegistration, ConcurrencyControl)> {
         let (url, company) = (&self.url, &self.company_name);
@@ -235,21 +240,19 @@ impl MaconomyHttpClient {
         let url = format!(
             "{url}/containers/{company}/timeregistration/instances/{id}/data/panes/table/?row=end"
         );
-        let maconomy_json = "application/vnd.deltek.maconomy.containers+json; version=5.0";
-
         let body = json!({
             "data": {
                 "jobnumber": job_number,
-                "taskname": task_name
+                "taskname": task_name.0
             }
         });
 
         let request = self
             .client
             .post(url)
-            .header(ACCEPT, maconomy_json)
-            .header(CONTENT_TYPE, maconomy_json)
-            .header("Maconomy-Concurrency-Control", concurrency_control)
+            .header(ACCEPT, MACONOMY_JSON_V5)
+            .header(CONTENT_TYPE, MACONOMY_JSON_V5)
+            .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
             .body(body.to_string());
 
         let response = self.send_request(request).await?;
@@ -261,6 +264,39 @@ impl MaconomyHttpClient {
 
         let concurrency_control = concurrency_control_from_headers(response.headers())?;
         let time_registration = response.json().await.context("Failed to parse response")?;
+
+        Ok((time_registration, concurrency_control.into()))
+    }
+
+    pub async fn delete_row(
+        &self,
+        line_number: u8,
+        container_instance: ContainerInstance,
+    ) -> Result<(TimeRegistration, ConcurrencyControl)> {
+        let (url, company) = (&self.url, &self.company_name);
+        let id = container_instance.id.0;
+        let concurrency_control = container_instance.concurrency_control.0;
+        let url = format!(
+            "{url}/containers/{company}/timeregistration/instances/{id}/data/panes/table/{line_number}"
+        );
+
+        let request = self
+            .client
+            .delete(url)
+            .header(ACCEPT, MACONOMY_JSON_V5)
+            .header(CONTENT_TYPE, MACONOMY_JSON_V5)
+            .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control);
+
+        let response = self.send_request(request).await?;
+
+        let status = &response.status();
+        if !status.is_success() {
+            bail!("Server responded with {status}");
+        }
+
+        let concurrency_control = concurrency_control_from_headers(response.headers())?;
+        let time_registration = response.json().await.context("Failed to parse response")?;
+
         Ok((time_registration, concurrency_control.into()))
     }
 }

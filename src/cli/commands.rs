@@ -1,5 +1,8 @@
 use crate::{
-    domain::{models::day::Day, time_sheet_service::TimeSheetService},
+    domain::{
+        models::{day::Day, line_number::LineNumber},
+        time_sheet_service::TimeSheetService,
+    },
     infrastructure::{
         auth_service::AuthService, repositories::time_sheet_repository::TimeSheetRepository,
     },
@@ -64,4 +67,14 @@ pub(crate) async fn clear(
 
 pub(crate) async fn logout(auth_service: &AuthService) -> Result<()> {
     auth_service.logout().await.context("Logout failed")
+}
+
+pub(crate) async fn delete(
+    line_number: &LineNumber,
+    repository: &mut TimeSheetRepository,
+) -> Result<()> {
+    repository
+        .delete_line(line_number)
+        .await
+        .with_context(|| format!("Failed to delete line {line_number:?}"))
 }

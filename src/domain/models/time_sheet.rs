@@ -1,5 +1,6 @@
 use super::hours::Hours;
 
+#[derive(Debug)]
 pub(crate) struct Week {
     pub(crate) monday: Hours,
     pub(crate) tuesday: Hours,
@@ -10,6 +11,7 @@ pub(crate) struct Week {
     pub(crate) sunday: Hours,
 }
 
+#[derive(Debug)]
 pub(crate) struct Line {
     pub(crate) job: String,
     pub(crate) task: String,

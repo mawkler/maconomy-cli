@@ -46,5 +46,10 @@ async fn main() -> Result<()> {
             commands::clear(&job, &task, day, &mut time_sheet_service).await
         }
         Command::Logout => commands::logout(&auth_service.clone()).await,
+        Command::Line(line) => match line {
+            cli::arguments::Line::Delete { line_number } => {
+                commands::delete(&line_number, &mut repository).await
+            }
+        },
     }
 }
