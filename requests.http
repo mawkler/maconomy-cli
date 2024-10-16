@@ -112,7 +112,7 @@ Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
 @job_name=<job name here>
 
 # Get job number from job name
-POST https://me73379-webclient.deltekfirst.com/maconomy-api/containers/me73379/timeregistration/search/table;foreignkey=notblockedjobnumber_jobheader
+POST {{base_url}}/containers/{{company}}/timeregistration/search/table;foreignkey=notblockedjobnumber_jobheader
 Authorization: X-Cookie {{cookie_name}}
 Cookie: {{cookie_name}}={{cookie_value}}
 Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
@@ -132,6 +132,27 @@ Content-type: application/vnd.deltek.maconomy.containers+json; version=5.0
 %}
 
 ###
+
+@job_number = <job number>
+
+# Get list of tasks
+POST {{base_url}}/containers/{{company}}/timeregistration/search/table;foreignkey=taskname_tasklistline
+Authorization: X-Cookie {{cookie_name}}
+Cookie: {{cookie_name}}={{cookie_value}}
+Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
+Content-type: application/vnd.deltek.maconomy.containers+json; version=5.0
+
+{
+  "data": {
+    "jobnumber": {{job_number}}
+  },
+  "fields": ["taskname", "description"]
+}
+
+###
+
+@job_number=<job number>
+@task_name=<task name>
 
 # Set new job and task on last row
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/?row=end
