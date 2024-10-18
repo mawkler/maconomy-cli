@@ -144,7 +144,7 @@ Content-type: application/vnd.deltek.maconomy.containers+json; version=5.0
 
 {
   "data": {
-    "jobnumber": {{job_number}}
+    "jobnumber": "{{job_number}}"
   },
   "fields": ["taskname", "description"]
 }
