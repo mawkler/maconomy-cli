@@ -6,6 +6,7 @@ use crate::{
         time_sheet::{Line, TimeSheet, Week},
     },
     infrastructure::models::{
+        search_response,
         taskname::{self},
         time_registration::{TableRecord, TimeRegistration},
     },
@@ -140,7 +141,24 @@ impl TimeSheetRepository {
         container_instance.concurrency_control = concurrency_control;
     }
 
-    pub async fn add_line(&mut self, job: &str, task: &str) -> Result<TimeSheet> {
+    async fn get_short_task_name_from_full_task_name(
+        &self,
+        task_name: &str,
+        job: &str,
+    ) -> Result<Option<taskname::ShortTaskName>> {
+        let tasks = self.get_tasks(job).await.context("Failed to get tasks")?;
+        let task = tasks
+            .panes
+            .filter
+            .records
+            .into_iter()
+            // `description` is the long name in this case (i.e. `tasktextvar`)
+            .find(|row| row.data.description == task_name)
+            .map(|row| taskname::ShortTaskName(row.data.taskname));
+        Ok(task)
+    }
+
+    async fn add_line(&mut self, job: &str, task: &str) -> Result<TimeSheet> {
         debug!("Getting job number for job '{job}'");
         let job_number = self
             .client
@@ -154,13 +172,12 @@ impl TimeSheetRepository {
         debug!("Got job number '{job_number}' for job '{job}'");
 
         let container_instance = self.get_container_instance().await?;
-        let time_registration = self
-            .get_time_registration()
-            .await
-            .context("Failed to get time registration")?;
 
-        let task_name = taskname::short_task_name_from_full_task_name(task, time_registration)
-            .with_context(|| format!("Could not get the short task name for task '{task}'"))?;
+        let task_name = self
+            .get_short_task_name_from_full_task_name(task, job)
+            .await
+            .with_context(|| format!("Could not get the short task name for task '{task}'"))?
+            .ok_or(anyhow!("Task '{task}' not found'"))?;
 
         debug!("Adding new row");
         let (time_registration, concurrecy_control) = self
@@ -209,6 +226,23 @@ impl TimeSheetRepository {
         self.time_registration = Some(time_registration.clone());
 
         Ok(())
+    }
+
+    async fn get_tasks(
+        &self,
+        job: &str,
+    ) -> Result<search_response::SearchResponse<search_response::Tasks>> {
+        let job_number = self
+            .client
+            .get_job_number_from_name(job)
+            .await
+            .context(format!("Failed to get job number for job '{job}'"))?
+            .ok_or(anyhow!("No job number found for job '{job}'"))?;
+
+        self.client
+            .get_tasks_for_job(&job_number)
+            .await
+            .with_context(|| format!("Failed to get tasks for job '{job}'"))
     }
 }
 

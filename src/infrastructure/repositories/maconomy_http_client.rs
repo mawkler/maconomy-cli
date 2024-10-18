@@ -10,7 +10,7 @@ use serde_json::json;
 use crate::infrastructure::{
     http_service::HttpService,
     models::{
-        search_response::SearchResponse,
+        search_response,
         taskname::ShortTaskName,
         time_registration::{Meta, TimeRegistration},
     },
@@ -214,10 +214,10 @@ impl MaconomyHttpClient {
             bail!("Server responded with {status}");
         }
 
-        let response_body: SearchResponse = response
+        let response_body: search_response::SearchResponse<search_response::Jobs> = response
             .json()
             .await
-            .context("Failed to parse response body into SearchResponse")?;
+            .context("Failed to parse response body into SearchResponse with jobs")?;
         let job_number = response_body
             .panes
             .filter
@@ -226,6 +226,40 @@ impl MaconomyHttpClient {
             .map(|record| record.data.jobnumber.clone());
 
         Ok(job_number)
+    }
+
+    pub async fn get_tasks_for_job(
+        &self,
+        job_number: &str,
+    ) -> Result<search_response::SearchResponse<search_response::Tasks>> {
+        let (url, company) = (&self.url, &self.company_name);
+        let url = format!(
+        "{url}/containers/{company}/timeregistration/search/table;foreignkey=taskname_tasklistline"
+    );
+
+        let body = json!({
+                "data": {
+                "jobnumber": job_number
+            },
+            "fields": ["taskname", "description"]
+        });
+
+        let request = self
+            .client
+            .post(url)
+            .header(CONTENT_TYPE, MACONOMY_JSON)
+            .body(body.to_string());
+
+        let response = self.send_request(request).await?;
+
+        let status = &response.status();
+        if !status.is_success() {
+            bail!("Server responded with {status}");
+        }
+        response
+            .json()
+            .await
+            .context("Failed to parse response body into SearchResponse with tasks")
     }
 
     pub async fn add_new_row(

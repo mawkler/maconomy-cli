@@ -1,42 +1,48 @@
 use serde::{Deserialize, Serialize};
 
-// This file was (semi) auto-generated based on the JSON response from Maconomy.
-
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SearchResponse {
-    pub panes: Panes,
+pub(crate) struct SearchResponse<T> {
+    pub(crate) panes: Panes<T>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Panes {
-    pub filter: Filter,
+pub(crate) struct Panes<T> {
+    pub(crate) filter: Filter<T>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Filter {
-    pub meta: Meta,
-    pub records: Vec<Record>,
+pub(crate) struct Filter<T> {
+    pub(crate) meta: Meta,
+    pub(crate) records: Vec<Record<T>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Meta {
-    pub pane_name: String,
-    pub row_count: i64,
-    pub row_offset: i64,
+pub(crate) struct Meta {
+    pub(crate) pane_name: String,
+    pub(crate) row_count: i64,
+    pub(crate) row_offset: i64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Record {
-    pub data: Data,
+pub(crate) struct Record<T> {
+    pub(crate) data: T,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Data {
-    pub jobnumber: String,
+pub(crate) struct Tasks {
+    pub(crate) taskname: String,
+    pub(crate) tasklist: String,
+    pub(crate) description: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct Jobs {
+    pub(crate) jobnumber: String,
 }
