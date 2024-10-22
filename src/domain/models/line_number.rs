@@ -23,7 +23,7 @@ impl FromStr for LineNumber {
 
         match line_number {
             Self::Number(0) => {
-                Err("Invalid line number '0'. Note that line numbers are 1-based".to_string())
+                Err("Invalid line number. Note that line numbers are 1-based".to_string())
             }
             n => Ok(n),
         }

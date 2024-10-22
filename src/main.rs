@@ -1,5 +1,4 @@
 use anyhow::Context;
-use anyhow::Result;
 use cli::arguments::{parse_arguments, Command};
 use cli::commands;
 use config::Configuration;
@@ -15,7 +14,7 @@ mod domain;
 mod infrastructure;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     env_logger::init(); // Enable logging
 
     let config = Configuration::new();
@@ -55,5 +54,7 @@ async fn main() -> Result<()> {
                 commands::delete(&line_number, &mut repository).await
             }
         },
-    }
+    };
+
+    Ok(())
 }

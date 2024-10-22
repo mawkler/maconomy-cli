@@ -45,7 +45,7 @@ impl HttpService {
             return Ok(response);
         }
 
-        debug!("Got {status} from maconomy");
+        debug!("Got status {status} from maconomy");
         if let StatusCode::UNAUTHORIZED = response.status() {
             debug!("Attempting to reauthenticate");
             // Reauthenticate (session cookie may have timed out)

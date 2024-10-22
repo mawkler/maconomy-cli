@@ -11,8 +11,29 @@ use crate::{
         time_registration::{TableRecord, TimeRegistration},
     },
 };
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use log::{debug, info};
+
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum SetTimeError {
+    #[error(transparent)]
+    AddLineError(#[from] AddLineError),
+    #[error("Something went wrong when setting hours: {0}")]
+    Unknown(#[from] anyhow::Error),
+    // TODO: handle authentication error
+}
+
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum AddLineError {
+    #[error("Week has not been initialized")]
+    WeekUninitialized,
+    #[error("Job '{0}' not found")]
+    JobNotFound(String),
+    #[error("Task '{0}' not found")]
+    TaskNotFound(String),
+    #[error("Something went wrong when adding a new line to the time sheet: {0}")]
+    Unknown(#[from] anyhow::Error),
+}
 
 pub(crate) struct TimeSheetRepository {
     client: MaconomyHttpClient,
@@ -80,20 +101,18 @@ impl TimeSheetRepository {
         job: &str,
         task: &str,
         time_sheet: &TimeSheet,
-    ) -> Result<u8> {
+    ) -> Result<u8, AddLineError> {
         let line_number = match time_sheet.find_line_nr(job, task) {
             Some(line_number) => line_number,
             None => {
                 info!("Found no line for job '{job}', task '{task}'. Creating new line for it");
-                let time_sheet = self.add_line(job, task).await.with_context(|| {
-                    format!(
-                        "Failed to add new line to time sheet for job '{job}' and task '{task}'"
-                    )
-                })?;
+                let time_sheet = self.add_line(job, task).await?;
 
                 time_sheet
                     .find_line_nr(job, task)
-                    .unwrap_or_else(|| panic!("Could not find job '{job}' and task '{task}', even after creating a new line for it"))
+                    .with_context(|| format!(
+                        "format not find job '{job}' and task '{task}', even after creating a new line for it"
+                    ))?
             }
         };
 
@@ -106,7 +125,7 @@ impl TimeSheetRepository {
         day: &Day,
         job: &str,
         task: &str,
-    ) -> Result<()> {
+    ) -> Result<(), SetTimeError> {
         let time_sheet = self
             .get_time_sheet()
             .await
@@ -147,18 +166,18 @@ impl TimeSheetRepository {
         job: &str,
     ) -> Result<Option<taskname::ShortTaskName>> {
         let tasks = self.get_tasks(job).await.context("Failed to get tasks")?;
-        let task = tasks
-            .panes
-            .filter
-            .records
+        let records = tasks.panes.filter.records;
+        let task_name = records
+            .clone()
             .into_iter()
             // `description` is the long name in this case (i.e. `tasktextvar`)
-            .find(|row| row.data.description == task_name)
+            .find(|row| row.data.description.to_lowercase() == task_name.to_lowercase())
             .map(|row| taskname::ShortTaskName(row.data.taskname));
-        Ok(task)
+
+        Ok(task_name)
     }
 
-    async fn add_line(&mut self, job: &str, task: &str) -> Result<TimeSheet> {
+    async fn add_line(&mut self, job: &str, task: &str) -> Result<TimeSheet, AddLineError> {
         debug!("Getting job number for job '{job}'");
         let job_number = self
             .client
@@ -167,19 +186,21 @@ impl TimeSheetRepository {
             .context(format!("Could not get job number for job '{job}'"))?;
 
         let Some(job_number) = job_number else {
-            bail!("Job '{job}' not found");
+            info!("Did not find a job number for {job}");
+            return Err(AddLineError::JobNotFound(job.to_string()));
         };
         debug!("Got job number '{job_number}' for job '{job}'");
 
-        let container_instance = self.get_container_instance().await?;
-
         let task_name = self
             .get_short_task_name_from_full_task_name(task, job)
-            .await
-            .with_context(|| format!("Could not get the short task name for task '{task}'"))?
-            .ok_or(anyhow!("Task '{task}' not found'"))?;
+            .await?
+            .ok_or_else(|| {
+                info!("Did not find a long task name for task '{task}'");
+                AddLineError::TaskNotFound(task.to_string())
+            })?;
 
         debug!("Adding new row");
+        let container_instance = self.get_container_instance().await?;
         let (time_registration, concurrecy_control) = self
             .client
             .add_new_row(&job_number, &task_name, container_instance)
@@ -204,7 +225,6 @@ impl TimeSheetRepository {
             .await
             .context("Failed to get time sheet")?;
 
-        // TODO: make line number 1 indexed
         let line_number = match line_number {
             LineNumber::Number(line_number) => *line_number,
             LineNumber::Last => {

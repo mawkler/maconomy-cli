@@ -5,55 +5,51 @@ use crate::{
         time_sheet_service::TimeSheetService,
     },
     infrastructure::{
-        auth_service::AuthService, repositories::time_sheet_repository::TimeSheetRepository,
+        auth_service::AuthService,
+        repositories::time_sheet_repository::{self, TimeSheetRepository},
     },
 };
-use anyhow::{Context, Result};
+use anyhow::Context;
 use chrono::{Datelike, Local};
-use log::info;
+use log::{error, info};
 
 // TODO: allow setting week
 pub(crate) async fn get_table(
     week: Option<u8>,
     repository: &mut TimeSheetRepository,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     if week.is_some() {
         panic!("--week flag is not yet supported")
     }
 
-    let time_sheet = repository
-        .get_time_sheet()
-        .await
-        .context("failed to get time sheet")?;
+    let time_sheet = repository.get_time_sheet().await?;
 
     println!("{time_sheet}");
     Ok(())
 }
 
-async fn get_json(week: Option<u8>, repository: &mut TimeSheetRepository) -> Result<()> {
+async fn get_json(week: Option<u8>, repository: &mut TimeSheetRepository) -> anyhow::Result<()> {
     if week.is_some() {
         panic!("--week flag is not yet supported")
     }
 
-    let time_sheet = repository
-        .get_time_sheet()
-        .await
-        .context("failed to get time sheet")?;
-
+    let time_sheet = repository.get_time_sheet().await?;
     let json = serde_json::to_string(&time_sheet).context("Failed to deserialize time sheet")?;
-    println!("{json}");
 
+    println!("{json}");
     Ok(())
 }
 
-fn get_day(day: Option<Day>) -> Result<Day> {
+fn get_day(day: Option<Day>) -> Day {
     if let Some(day) = day {
-        Ok(day)
+        day
     } else {
         // Fall back to today's weekday
-        let today = Local::now().date_naive().weekday().to_string().parse()?;
+        let today = Local::now().date_naive().weekday().to_string();
+        let today = today.parse().expect("Failed to parse today's weekday");
         info!("no day passed to 'set', using today's weekday '{today}'");
-        Ok(today)
+
+        today
     }
 }
 
@@ -61,12 +57,24 @@ pub(crate) async fn get(
     week: Option<u8>,
     format: Option<Format>,
     repository: &mut TimeSheetRepository,
-) -> Result<()> {
+) {
     let format = format.unwrap_or(Format::Table);
     match format {
-        Format::Json => get_json(week, repository).await,
-        Format::Table => get_table(week, repository).await,
+        Format::Json => get_json(week, repository)
+            .await
+            .unwrap_or_else(|err| eprintln!("Failed to get time sheet as JSON: {err}")),
+        Format::Table => get_table(week, repository)
+            .await
+            .unwrap_or_else(|err| eprintln!("Failed to get time sheet as table: {err}")),
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum SetTimeError {
+    #[error(transparent)]
+    Known(#[from] time_sheet_repository::SetTimeError),
+    #[error("Something went wrong when setting hours")]
+    Unknown(#[from] anyhow::Error),
 }
 
 pub(crate) async fn set(
@@ -75,18 +83,14 @@ pub(crate) async fn set(
     job: &str,
     task: &str,
     repository: &mut TimeSheetRepository,
-) -> Result<()> {
-    let day = get_day(day)?;
+) {
+    let day = get_day(day);
     repository
         .set_time(hours, &day, job, task)
         .await
-        .with_context(|| {
-            format!("Failed to set {hours} hours on {day}, job '{job}', task '{task}'")
-        })?;
-
-    info!("time sheet successfully set: {hours} hours on {day}");
-
-    Ok(())
+        .unwrap_or_else(|err| {
+            eprintln!("{err}");
+        });
 }
 
 pub(crate) async fn clear(
@@ -94,21 +98,31 @@ pub(crate) async fn clear(
     task: &str,
     day: Option<Day>,
     service: &mut TimeSheetService<'_>,
-) -> Result<()> {
-    let day = get_day(day)?;
-    service.clear(job, task, &day).await
+) {
+    // TODO
+    service
+        .clear(job, task, &get_day(day))
+        .await
+        .unwrap_or_else(|err| {
+            eprintln!("{err}");
+        });
 }
 
-pub(crate) async fn logout(auth_service: &AuthService) -> Result<()> {
-    auth_service.logout().await.context("Logout failed")
+pub(crate) async fn logout(auth_service: &AuthService) {
+    auth_service
+        .logout()
+        .await
+        .context("Logout failed")
+        .unwrap_or_else(|err| {
+            eprintln!("Logout failed: {err}");
+        });
 }
 
-pub(crate) async fn delete(
-    line_number: &LineNumber,
-    repository: &mut TimeSheetRepository,
-) -> Result<()> {
+pub(crate) async fn delete(line_number: &LineNumber, repository: &mut TimeSheetRepository) {
     repository
         .delete_line(line_number)
         .await
-        .with_context(|| format!("Failed to delete line {line_number:?}"))
+        .unwrap_or_else(|err| {
+            eprintln!("Failed to delete line {line_number:?}: {err}");
+        });
 }
