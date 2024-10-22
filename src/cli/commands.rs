@@ -4,12 +4,13 @@ use crate::{
         time_sheet_service::TimeSheetService,
     },
     infrastructure::{
-        auth_service::AuthService, repositories::time_sheet_repository::TimeSheetRepository,
+        auth_service::AuthService,
+        repositories::time_sheet_repository::{self, TimeSheetRepository},
     },
 };
 use anyhow::{Context, Result};
 use chrono::{Datelike, Local};
-use log::info;
+use log::{debug, error, info};
 
 // TODO: allow setting week
 pub(crate) async fn get(week: Option<u8>, repository: &mut TimeSheetRepository) -> Result<()> {
@@ -31,10 +32,20 @@ fn get_day(day: Option<Day>) -> Result<Day> {
         Ok(day)
     } else {
         // Fall back to today's weekday
-        let today = Local::now().date_naive().weekday().to_string().parse()?;
+        let today = Local::now().date_naive().weekday().to_string();
+        let today = today.parse().context("Failed to parse today's weekday")?;
         info!("no day passed to 'set', using today's weekday '{today}'");
+
         Ok(today)
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum SetTimeError {
+    #[error(transparent)]
+    Known(#[from] time_sheet_repository::SetTimeError),
+    #[error("Something went wrong when setting hours")]
+    Unknown(#[from] anyhow::Error),
 }
 
 pub(crate) async fn set(
@@ -43,16 +54,17 @@ pub(crate) async fn set(
     job: &str,
     task: &str,
     repository: &mut TimeSheetRepository,
-) -> Result<()> {
+) -> Result<(), SetTimeError> {
     let day = get_day(day)?;
     repository
         .set_time(hours, &day.clone(), job, task)
         .await
-        .with_context(|| format!("Failed to set {hours} hours on {day}, job {job}, task {task}"))?;
-
-    info!("time sheet successfully set: {hours} hours on {day}");
-
-    Ok(())
+        .map_err(|err| {
+            if let time_sheet_repository::SetTimeError::Unknown(ref e) = err {
+                error!("{err}");
+            }
+            err.into()
+        })
 }
 
 pub(crate) async fn clear(
@@ -61,8 +73,9 @@ pub(crate) async fn clear(
     day: Option<Day>,
     service: &mut TimeSheetService<'_>,
 ) -> Result<()> {
-    let day = get_day(day)?;
-    service.clear(job, task, &day).await
+    let day = get_day(day).context("")?;
+    // service.clear(job, task, &day).await
+    todo!()
 }
 
 pub(crate) async fn logout(auth_service: &AuthService) -> Result<()> {

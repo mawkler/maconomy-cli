@@ -14,6 +14,17 @@ use crate::{
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info};
 
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum SetTimeError {
+    #[error("Job {0} not found")]
+    JobNotFound(String),
+    #[error("Task {0} not found")]
+    TaskNotFound(String),
+    #[error("Something went wrong when setting hours: {0}")]
+    Unknown(#[from] anyhow::Error),
+    // TODO: handle authentication error
+}
+
 pub(crate) struct TimeSheetRepository {
     client: MaconomyHttpClient,
     container_instance: Option<ContainerInstance>,
@@ -106,7 +117,7 @@ impl TimeSheetRepository {
         day: &Day,
         job: &str,
         task: &str,
-    ) -> Result<()> {
+    ) -> Result<(), SetTimeError> {
         let time_sheet = self
             .get_time_sheet()
             .await
@@ -145,17 +156,21 @@ impl TimeSheetRepository {
         &self,
         task_name: &str,
         job: &str,
-    ) -> Result<Option<taskname::ShortTaskName>> {
+    ) -> Result<taskname::ShortTaskName> {
         let tasks = self.get_tasks(job).await.context("Failed to get tasks")?;
-        let task = tasks
-            .panes
-            .filter
-            .records
+        let records = tasks.panes.filter.records;
+        records
+            .clone()
             .into_iter()
             // `description` is the long name in this case (i.e. `tasktextvar`)
-            .find(|row| row.data.description == task_name)
-            .map(|row| taskname::ShortTaskName(row.data.taskname));
-        Ok(task)
+            .find(|row| row.data.description.to_lowercase() == task_name.to_lowercase())
+            .ok_or_else(|| {
+                anyhow!(
+                    "Could not get the short task name for task '{task_name}'. Got the following \
+                    records from maconomy: {records:?}"
+                )
+            })
+            .map(|row| taskname::ShortTaskName(row.data.taskname))
     }
 
     async fn add_line(&mut self, job: &str, task: &str) -> Result<TimeSheet> {
@@ -176,8 +191,8 @@ impl TimeSheetRepository {
         let task_name = self
             .get_short_task_name_from_full_task_name(task, job)
             .await
-            .with_context(|| format!("Could not get the short task name for task '{task}'"))?
-            .ok_or(anyhow!("Task '{task}' not found'"))?;
+            // TODO: return a proper NotFound error type here
+            .with_context(|| format!("Task '{task}' not found'"))?;
 
         debug!("Adding new row");
         let (time_registration, concurrecy_control) = self
@@ -204,7 +219,6 @@ impl TimeSheetRepository {
             .await
             .context("Failed to get time sheet")?;
 
-        // TODO: make line number 1 indexed
         let line_number = match line_number {
             LineNumber::Number(line_number) => *line_number,
             LineNumber::Last => {
