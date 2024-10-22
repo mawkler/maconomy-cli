@@ -203,3 +203,26 @@ Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
 
   capture_header('concurrency_control', 'maconomy-concurrency-control')
 %}
+
+###
+
+# Create new timesheet
+POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/card/0/action;name=createtimesheet
+Authorization: X-Cookie {{cookie_name}}
+Cookie: {{cookie_name}}={{cookie_value}}
+Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
+Maconomy-Concurrency-Control: {{concurrency_control}}
+Maconomy-Response-Type: patch
+Content-Length: 0
+
+# @lang=lua
+> {%
+  local function capture_header(variable_name, header_name)
+    local header_values = response.headers[header_name]
+    if header_values ~= nil then
+      client.global.set(variable_name, header_values[1])
+    end
+  end
+
+  capture_header('concurrency_control', 'maconomy-concurrency-control')
+%}

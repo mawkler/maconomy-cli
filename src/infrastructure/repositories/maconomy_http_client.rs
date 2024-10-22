@@ -118,6 +118,38 @@ impl MaconomyHttpClient {
         })
     }
 
+    // TODO: this function hasn't actually been tested
+    pub(crate) async fn create_timesheet(
+        &self,
+        container_instance: &ContainerInstance,
+    ) -> Result<(TimeRegistration, ConcurrencyControl)> {
+        let id = &container_instance.id.0;
+        let instance_url = self.get_container_instance_url(id);
+        let url = format!("{instance_url}/data/panes/card/0/action;name=createtimesheet");
+        // TODO: not sure if I need the concurrency control
+        let concurrency_control = &container_instance.concurrency_control.0;
+
+        let request = self
+            .client
+            .post(url)
+            .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
+            .header(CONTENT_TYPE, MACONOMY_JSON_V5)
+            .header(CONTENT_LENGTH, 0)
+            .header("Maconomy-Response-Type", "patch"); // TODO: this header value is probably not needed
+
+        let response = self.send_request(request).await?;
+
+        let status = &response.status();
+        if !status.is_success() {
+            bail!("Server responded with {status}");
+        }
+
+        let concurrency_control = concurrency_control_from_headers(response.headers())?;
+        let time_registration = response.json().await.context("Failed to parse response")?;
+
+        Ok((time_registration, concurrency_control.into()))
+    }
+
     async fn send_request(&self, request: RequestBuilder) -> Result<reqwest::Response> {
         let request = request.header(USER_AGENT, "Maconomy CLI");
         self.http_service
