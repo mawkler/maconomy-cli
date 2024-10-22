@@ -74,6 +74,11 @@ impl MaconomyHttpClient {
         }
     }
 
+    fn get_container_instance_url(&self, container_instance_id: &str) -> String {
+        let (url, company) = (&self.url, &self.company_name);
+        format!("{url}/containers/{company}/timeregistration/instances/{container_instance_id}")
+    }
+
     pub(crate) async fn get_container_instance(&self) -> Result<ContainerInstance> {
         let (url, company) = (&self.url, &self.company_name);
         let url = format!("{url}/containers/{company}/timeregistration/instances");
@@ -125,9 +130,9 @@ impl MaconomyHttpClient {
         &self,
         container_instance: &ContainerInstance,
     ) -> Result<(TimeRegistration, ConcurrencyControl)> {
-        let (url, company) = (&self.url, &self.company_name);
         let id = &container_instance.id.0;
-        let url = format!("{url}/containers/{company}/timeregistration/instances/{id}/data;any");
+        let instance_url = self.get_container_instance_url(id);
+        let url = format!("{instance_url}/data;any");
         let concurrency_control = &container_instance.concurrency_control.0;
 
         let request = self
@@ -156,12 +161,10 @@ impl MaconomyHttpClient {
         row: u8,
         container_instance: ContainerInstance,
     ) -> Result<ConcurrencyControl> {
-        let (url, company) = (&self.url, &self.company_name);
         let id = container_instance.id.0;
         let concurrency_control = container_instance.concurrency_control.0;
-        let url = format!(
-            "{url}/containers/{company}/timeregistration/instances/{id}/data/panes/table/{row}"
-        );
+        let instance_url = self.get_container_instance_url(&id);
+        let url = format!("{instance_url}/data/panes/table/{row}");
 
         let day = format!("numberday{day}");
         let body = json!({"data": {day: hours}});
@@ -268,12 +271,10 @@ impl MaconomyHttpClient {
         task_name: &ShortTaskName,
         container_instance: ContainerInstance,
     ) -> Result<(TimeRegistration, ConcurrencyControl)> {
-        let (url, company) = (&self.url, &self.company_name);
         let id = container_instance.id.0;
         let concurrency_control = container_instance.concurrency_control.0;
-        let url = format!(
-            "{url}/containers/{company}/timeregistration/instances/{id}/data/panes/table/?row=end"
-        );
+        let instance_url = self.get_container_instance_url(&id);
+        let url = format!("{instance_url}/data/panes/table/?row=end");
         let body = json!({
             "data": {
                 "jobnumber": job_number,
@@ -307,12 +308,10 @@ impl MaconomyHttpClient {
         line_number: u8,
         container_instance: ContainerInstance,
     ) -> Result<(TimeRegistration, ConcurrencyControl)> {
-        let (url, company) = (&self.url, &self.company_name);
         let id = container_instance.id.0;
         let concurrency_control = container_instance.concurrency_control.0;
-        let url = format!(
-            "{url}/containers/{company}/timeregistration/instances/{id}/data/panes/table/{line_number}"
-        );
+        let instance_url = self.get_container_instance_url(&id);
+        let url = format!("{instance_url}/data/panes/table/{line_number}");
 
         let request = self
             .client
