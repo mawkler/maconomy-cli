@@ -8,35 +8,37 @@ use crate::{
         repositories::time_sheet_repository::{self, TimeSheetRepository},
     },
 };
-use anyhow::{Context, Result};
+use anyhow::Context;
 use chrono::{Datelike, Local};
-use log::{debug, error, info};
+use log::{error, info};
 
 // TODO: allow setting week
-pub(crate) async fn get(week: Option<u8>, repository: &mut TimeSheetRepository) -> Result<()> {
+pub(crate) async fn get(week: Option<u8>, repository: &mut TimeSheetRepository) {
     if week.is_some() {
         panic!("--week flag is not yet supported")
     }
 
-    let time_sheet = repository
-        .get_time_sheet()
-        .await
-        .context("failed to get time sheet")?;
+    let time_sheet = match repository.get_time_sheet().await {
+        Ok(time_sheet) => time_sheet,
+        Err(err) => {
+            eprintln!("Failed to get time sheet: {err}");
+            return;
+        }
+    };
 
     println!("{time_sheet}");
-    Ok(())
 }
 
-fn get_day(day: Option<Day>) -> Result<Day> {
+fn get_day(day: Option<Day>) -> Day {
     if let Some(day) = day {
-        Ok(day)
+        day
     } else {
         // Fall back to today's weekday
         let today = Local::now().date_naive().weekday().to_string();
-        let today = today.parse().context("Failed to parse today's weekday")?;
+        let today = today.parse().expect("Failed to parse today's weekday");
         info!("no day passed to 'set', using today's weekday '{today}'");
 
-        Ok(today)
+        today
     }
 }
 
@@ -54,17 +56,14 @@ pub(crate) async fn set(
     job: &str,
     task: &str,
     repository: &mut TimeSheetRepository,
-) -> Result<(), SetTimeError> {
-    let day = get_day(day)?;
+) {
+    let day = get_day(day);
     repository
-        .set_time(hours, &day.clone(), job, task)
+        .set_time(hours, &day, job, task)
         .await
-        .map_err(|err| {
-            if let time_sheet_repository::SetTimeError::Unknown(ref e) = err {
-                error!("{err}");
-            }
-            err.into()
-        })
+        .unwrap_or_else(|err| {
+            eprintln!("{err}");
+        });
 }
 
 pub(crate) async fn clear(
@@ -72,22 +71,31 @@ pub(crate) async fn clear(
     task: &str,
     day: Option<Day>,
     service: &mut TimeSheetService<'_>,
-) -> Result<()> {
-    let day = get_day(day).context("")?;
-    // service.clear(job, task, &day).await
-    todo!()
+) {
+    // TODO
+    service
+        .clear(job, task, &get_day(day))
+        .await
+        .unwrap_or_else(|err| {
+            eprintln!("{err}");
+        });
 }
 
-pub(crate) async fn logout(auth_service: &AuthService) -> Result<()> {
-    auth_service.logout().await.context("Logout failed")
+pub(crate) async fn logout(auth_service: &AuthService) {
+    auth_service
+        .logout()
+        .await
+        .context("Logout failed")
+        .unwrap_or_else(|err| {
+            eprintln!("Logout failed: {err}");
+        });
 }
 
-pub(crate) async fn delete(
-    line_number: &LineNumber,
-    repository: &mut TimeSheetRepository,
-) -> Result<()> {
+pub(crate) async fn delete(line_number: &LineNumber, repository: &mut TimeSheetRepository) {
     repository
         .delete_line(line_number)
         .await
-        .with_context(|| format!("Failed to delete line {line_number:?}"))
+        .unwrap_or_else(|err| {
+            eprintln!("Failed to delete line {line_number:?}: {err}");
+        });
 }

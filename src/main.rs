@@ -1,11 +1,9 @@
 use anyhow::Context;
-use anyhow::Result;
 use cli::arguments::{parse_arguments, Command};
 use cli::commands;
 use config::Configuration;
 use domain::time_sheet_service::TimeSheetService;
 use infrastructure::repositories::maconomy_http_client::MaconomyHttpClient;
-use infrastructure::repositories::time_sheet_repository;
 use infrastructure::repositories::time_sheet_repository::TimeSheetRepository;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
 use std::rc::Rc;
@@ -15,16 +13,8 @@ mod config;
 mod domain;
 mod infrastructure;
 
-#[derive(thiserror::Error, Debug)]
-enum CliError {
-    #[error("Failed to set hours: {0}")]
-    SetTimeError(#[from] commands::SetTimeError),
-    #[error(transparent)]
-    Error(#[from] anyhow::Error),
-}
-
 #[tokio::main]
-async fn main() -> Result<(), CliError> {
+async fn main() -> anyhow::Result<()> {
     env_logger::init(); // Enable logging
 
     let config = Configuration::new();
@@ -44,30 +34,23 @@ async fn main() -> Result<(), CliError> {
     let mut time_sheet_service = TimeSheetService::new(&mut repository);
 
     match parse_arguments() {
-        // Command::Get { week } => commands::get(week, &mut repository).await,
+        Command::Get { week } => commands::get(week, &mut repository).await,
         Command::Set {
             hours,
             day,
             job,
             task,
-        } => commands::set(hours, day, &job, &task, &mut repository)
-            .await
-            .map_err(CliError::from),
+        } => commands::set(hours, day, &job, &task, &mut repository).await,
         Command::Clear { job, task, day } => {
-            commands::clear(&job, &task, day, &mut time_sheet_service)
-                .await
-                .map_err(CliError::from)
+            commands::clear(&job, &task, day, &mut time_sheet_service).await
         }
-        Command::Logout => commands::logout(&auth_service.clone())
-            .await
-            .map_err(CliError::from),
+        Command::Logout => commands::logout(&auth_service.clone()).await,
         Command::Line(line) => match line {
             cli::arguments::Line::Delete { line_number } => {
-                commands::delete(&line_number, &mut repository)
-                    .await
-                    .map_err(CliError::from)
+                commands::delete(&line_number, &mut repository).await
             }
         },
-        _ => todo!(),
-    }
+    };
+
+    Ok(())
 }
