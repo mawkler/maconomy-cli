@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
     let mut time_sheet_service = TimeSheetService::new(&mut repository);
 
     match parse_arguments() {
-        Command::Get { week } => commands::get(week, &mut repository).await,
+        Command::Get { week, format } => commands::get(week, format, &mut repository).await,
         Command::Set {
             hours,
             day,

@@ -105,7 +105,7 @@ impl MaconomyHttpClient {
         let container_instance_id = response
             .json::<GetInstancesResponseBody>()
             .await
-            .context("Could not deserialize response")?
+            .context("Could not deserialize response to container instance")?
             .meta
             .container_instance_id;
 
@@ -181,7 +181,10 @@ impl MaconomyHttpClient {
         }
 
         let concurrency_control = concurrency_control_from_headers(response.headers())?;
-        let time_registration = response.json().await.context("Failed to parse response")?;
+        let time_registration = response
+            .json()
+            .await
+            .context("Failed to parse response to time registration")?;
         Ok((time_registration, concurrency_control.into()))
     }
 

@@ -22,7 +22,10 @@ async fn send_with_cookie(
         .header(COOKIE, auth_cookie.to_string())
         .header(AUTHORIZATION, format!("X-Cookie {}", auth_cookie.name));
     debug!("Sending request {request:?}");
-    request.send().await.context("Failed to send request")
+    request
+        .send()
+        .await
+        .context("Failed to send authenticated request")
 }
 
 impl HttpService {

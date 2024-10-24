@@ -1,6 +1,6 @@
 use super::hours::Hours;
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub(crate) struct Week {
     pub(crate) monday: Hours,
     pub(crate) tuesday: Hours,
@@ -11,7 +11,7 @@ pub(crate) struct Week {
     pub(crate) sunday: Hours,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub(crate) struct Line {
     pub(crate) job: String,
     pub(crate) task: String,
@@ -24,7 +24,7 @@ impl Line {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize)]
 pub(crate) struct TimeSheet {
     pub(crate) lines: Vec<Line>,
 }

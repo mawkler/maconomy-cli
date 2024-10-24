@@ -56,7 +56,7 @@ impl TimeSheetRepository {
             .client
             .get_time_registration(&container_instance)
             .await
-            .context("Failed to get time sheet")?;
+            .context("Failed to get time registration")?;
 
         self.update_concurrency_control(concurrency_control);
         self.time_registration = Some(time_registration.clone());

@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub(crate) struct Hours(pub(crate) f32);
 
 impl From<f32> for Hours {

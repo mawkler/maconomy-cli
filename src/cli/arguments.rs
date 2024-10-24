@@ -3,6 +3,24 @@ use clap::{Parser, Subcommand};
 use color_print::cformat;
 use std::str::FromStr;
 
+#[derive(Debug, Clone)]
+pub(crate) enum Format {
+    Json,
+    Table,
+}
+
+impl FromStr for Format {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "json" => Ok(Format::Json),
+            "table" => Ok(Format::Table),
+            format => Err(format!("Invalid format '{format}'")),
+        }
+    }
+}
+
 #[derive(Debug, Subcommand)]
 pub enum Line {
     /// Delete line based on line number (1-indexed)
@@ -16,6 +34,9 @@ pub enum Command {
         /// Week number (NOT YET SUPPORTED)
         #[arg(short, long)]
         week: Option<u8>,
+        /// Output format (defaults to "table")
+        #[arg(short, long)]
+        format: Option<Format>,
     },
 
     /// Set number of hours on some day for a given job and task

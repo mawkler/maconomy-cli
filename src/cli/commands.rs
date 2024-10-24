@@ -1,3 +1,4 @@
+use super::arguments::Format;
 use crate::{
     domain::{
         models::{day::Day, line_number::LineNumber},
@@ -12,7 +13,10 @@ use chrono::{Datelike, Local};
 use log::info;
 
 // TODO: allow setting week
-pub(crate) async fn get(week: Option<u8>, repository: &mut TimeSheetRepository) -> Result<()> {
+pub(crate) async fn get_table(
+    week: Option<u8>,
+    repository: &mut TimeSheetRepository,
+) -> Result<()> {
     if week.is_some() {
         panic!("--week flag is not yet supported")
     }
@@ -23,6 +27,22 @@ pub(crate) async fn get(week: Option<u8>, repository: &mut TimeSheetRepository) 
         .context("failed to get time sheet")?;
 
     println!("{time_sheet}");
+    Ok(())
+}
+
+async fn get_json(week: Option<u8>, repository: &mut TimeSheetRepository) -> Result<()> {
+    if week.is_some() {
+        panic!("--week flag is not yet supported")
+    }
+
+    let time_sheet = repository
+        .get_time_sheet()
+        .await
+        .context("failed to get time sheet")?;
+
+    let json = serde_json::to_string(&time_sheet).context("Failed to deserialize time sheet")?;
+    println!("{json}");
+
     Ok(())
 }
 
@@ -37,6 +57,18 @@ fn get_day(day: Option<Day>) -> Result<Day> {
     }
 }
 
+pub(crate) async fn get(
+    week: Option<u8>,
+    format: Option<Format>,
+    repository: &mut TimeSheetRepository,
+) -> Result<()> {
+    let format = format.unwrap_or(Format::Table);
+    match format {
+        Format::Json => get_json(week, repository).await,
+        Format::Table => get_table(week, repository).await,
+    }
+}
+
 pub(crate) async fn set(
     hours: f32,
     day: Option<Day>,
@@ -46,7 +78,7 @@ pub(crate) async fn set(
 ) -> Result<()> {
     let day = get_day(day)?;
     repository
-        .set_time(hours, &day.clone(), job, task)
+        .set_time(hours, &day, job, task)
         .await
         .with_context(|| format!("Failed to set {hours} hours on {day}, job {job}, task {task}"))?;
 
