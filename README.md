@@ -62,7 +62,7 @@ cargo install --path maconomy-cli/
 
 ### Configuration
 
-Configuration is done in the file `~/.config/maconomy-cli/config.toml`. Here's what the config file should look like (all fields are required):
+Configuration is done in the file `~/.config/maconomy-cli/config.toml`. Here's what the config file should look like. All fields except `cookie_path` are required:
 
 ```toml
 # ~/.config/maconomy-cli/config.toml
@@ -71,13 +71,10 @@ company_id = "<company ID>"
 
 [authentication.sso]
 login_url = "<URL to your company's SSO login web page for Maconomy>"
+cookie_path = "<path to where auth cookie should be stored>" # Optional, defaults to ~/.local/share/maconomy-cli/maconomy_cookie
 ```
 
 ## Known issues
-
-### "Line ... not found"
-
-maconomy-cli can currently not create new lines in the time sheet. This means that if the job + task combination specified doesn't have a line in the time sheet (I.e. doesn't appear in `maconomy get`), maconomy-cli can't currently set a value in it. Until this has been implemented, you'll have to manually press the `Add Time Sheet Line` button in your web browser.
 
 ### "Request failed with status 401 Unauthorized"
 
@@ -96,7 +93,7 @@ cargo run
 cargo run -- set --job '<job name>' --task '<task name>' 8
 ```
 
-To run unit tests:
+To run tests:
 
 ```sh
 cargo test
