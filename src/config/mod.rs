@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use config::Config;
 use serde::Deserialize;
-use std::env::var;
 
 pub struct Configuration {
     config: Config,
@@ -9,19 +8,18 @@ pub struct Configuration {
 
 impl Configuration {
     pub fn new() -> Self {
-        let home = var("XDG_CONFIG_HOME")
-            .or(var("HOME"))
-            .unwrap_or("".to_string());
-        let system_config = format!("{}/.config/maconomy-cli/config", home);
-
+        let config_path = shellexpand::tilde("~/.config/maconomy-cli/config").to_string();
         let config = Config::builder()
             // Config file `~/.config/maconomy-cli/config.toml`
-            .add_source(config::File::with_name(&system_config).required(false))
+            .add_source(config::File::with_name(&config_path).required(false))
             // Or `./config.toml`
             .add_source(config::File::with_name("config").required(false))
-            // Add in settings from the environment (with a prefix of MACONOMY)
-            // E.g. `MACONOMY_DEBUG=1 ./target/app` would set the `debug` key
-            .add_source(config::Environment::with_prefix("MACONOMY"))
+            // Add in settings from environment variables (with a prefix of `MACONOMY__`)
+            //
+            // E.g. `MACONOMY__AUTHENTICATION__SSO__COOKIE_PATH=foo/bar/cookie ./target/maconomy`
+            // runs with `authentication.sso.cookie_path` set to `foo/bar/cookie` (notice how the
+            // `.`s are replaced with double underscores)
+            .add_source(config::Environment::with_prefix("MACONOMY").separator("__"))
             .build()
             .expect("Failed to read configuration");
 

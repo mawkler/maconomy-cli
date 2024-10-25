@@ -1,24 +1,36 @@
-// use crate::maconomy_mock;
+use crate::helpers;
 use assert_cmd::Command;
-use std::{env, ffi};
+use std::{env, ffi, fs::File, io::Write};
 use wiremock::MockServer;
 
-use crate::helpers;
+const COOKIE_PATH: &str = "./integration_test_auth_cookie";
 
 fn run(
     args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
     server_url: &str,
 ) -> serde_json::Value {
-    env::set_var("MACONOMY_MACONOMY_URL", server_url);
+    env::set_var("MACONOMY__MACONOMY_URL", server_url);
     let output = Command::cargo_bin("maconomy").unwrap().args(args).unwrap();
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
-// TODO: deal with authentication
+fn use_mock_auth_cookie_file() {
+    let cookie = serde_json::json!({
+      "name": "Maconomy-mock-cookie",
+      "value": "\"mock_cookie_value\""
+    });
+
+    let mut file = File::create(COOKIE_PATH).expect("failed to create mock cookie file");
+    file.write_all(cookie.to_string().as_bytes())
+        .expect("failed to write to mock cookie file");
+
+    env::set_var("MACONOMY__AUTHENTICATION__SSO__COOKIE_PATH", COOKIE_PATH);
+}
+
 #[tokio::main]
 #[test]
 async fn test_get_timesheet() {
-    // Start a local mock HTTP server on a random port
+    // Given
     let mock_server = MockServer::start().await;
     helpers::maconomy_mock::mock_get_instance(None)
         .mount(&mock_server)
@@ -26,8 +38,7 @@ async fn test_get_timesheet() {
     helpers::maconomy_mock::mock_get_table_rows(None)
         .mount(&mock_server)
         .await;
-
-    let output = run(["get", "--format", "json"], &mock_server.uri());
+    use_mock_auth_cookie_file();
 
     let expected = serde_json::json!({
       "lines": [
@@ -60,6 +71,10 @@ async fn test_get_timesheet() {
       ]
     });
 
+    // When
+    let output = run(["get", "--format", "json"], &mock_server.uri());
+
+    // Then
     assert_json_diff::assert_json_include!(
         expected: expected,
         actual: output
