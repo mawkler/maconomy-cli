@@ -23,7 +23,11 @@ async fn main() -> Result<()> {
     let company_name = config.get_value("company_id")?;
 
     let login_url = config.get_value("authentication.sso.login_url")?;
-    let auth_service = Rc::from(AuthService::new(login_url));
+    let cookie_path = config
+        .get_optional_value("authentication.sso.cookie_path")?
+        .unwrap_or("~/.local/share/maconomy-cli/maconomy_cookie".to_string());
+
+    let auth_service = Rc::from(AuthService::new(login_url, cookie_path));
     let http_service = HttpService::new(auth_service.clone());
     let client = reqwest::Client::builder()
         .cookie_store(true)

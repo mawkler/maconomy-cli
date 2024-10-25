@@ -1,4 +1,4 @@
-use anyhow::{Context, Ok, Result};
+use anyhow::{anyhow, Context, Result};
 use config::Config;
 use serde::Deserialize;
 use std::env::var;
@@ -35,5 +35,19 @@ impl Configuration {
         );
         let value = self.config.get(value_name).context(error)?;
         Ok(value)
+    }
+
+    pub fn get_optional_value<'a, T: Deserialize<'a>>(
+        &self,
+        value_name: &str,
+    ) -> Result<Option<T>> {
+        let value = self.config.get(value_name);
+        match value {
+            Ok(value) => Ok(Some(value)),
+            Err(config::ConfigError::NotFound(_)) => Ok(None),
+            Err(err) => Err(anyhow!(
+                "Failed to get optional value '{value_name}': {err}"
+            )),
+        }
     }
 }

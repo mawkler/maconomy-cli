@@ -5,9 +5,10 @@ use chromiumoxide::page::Page;
 use futures::StreamExt;
 use log::{debug, error, info};
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::fmt::Display;
+use std::fs;
 use std::io::{self, BufReader};
-use std::{env, fs};
 use std::{fs::File, io::Write, time::Duration};
 
 const COOKIE_NAME_PREFIX: &str = "Maconomy-";
@@ -38,13 +39,15 @@ impl Display for AuthCookie {
 pub(crate) struct AuthService {
     auth_cookie: Option<AuthCookie>,
     login_url: String,
+    cookie_path: String,
 }
 
 impl AuthService {
-    pub(crate) fn new(login_url: String) -> Self {
+    pub(crate) fn new(login_url: String, cookie_path: String) -> Self {
         Self {
             auth_cookie: None,
             login_url,
+            cookie_path,
         }
     }
 
@@ -55,7 +58,7 @@ impl AuthService {
         }
 
         info!("Cookie not found in memory, attempting to read in from file");
-        if let Some(cookie) = read_cookie_from_file()? {
+        if let Some(cookie) = self.read_cookie_from_file()? {
             info!("Found cookie in file");
             return Ok(cookie.clone());
         }
@@ -69,9 +72,21 @@ impl AuthService {
     pub(crate) async fn reauthenticate(&self) -> Result<AuthCookie> {
         let cookie = self.open_browser_and_authenticate().await?;
 
-        write_cookie_to_file(&cookie)?;
+        self.write_cookie_to_file(&cookie)?;
 
         Ok(cookie.into())
+    }
+
+    pub(crate) async fn logout(&self) -> Result<()> {
+        if let Err(err) = fs::remove_file(&*self.get_cookie_path()?) {
+            if err.kind() != io::ErrorKind::NotFound {
+                bail!("Failed to remove auth cookie: {err}");
+            }
+        };
+
+        self.clear_browser_cookies()
+            .await
+            .context("Failed to clear browser cookies")
     }
 
     async fn open_browser_and_authenticate(&self) -> Result<Cookie> {
@@ -136,54 +151,40 @@ impl AuthService {
         Ok(())
     }
 
-    pub(crate) async fn logout(&self) -> Result<()> {
-        if let Err(err) = fs::remove_file(get_cookie_path()?) {
-            if err.kind() != io::ErrorKind::NotFound {
-                bail!("Failed to remove auth cookie: {err}");
-            }
+    fn get_cookie_path(&self) -> Result<Cow<str>> {
+        shellexpand::full(&self.cookie_path).context("Failed to expand cookie path")
+    }
+
+    fn write_cookie_to_file(&self, cookie: &Cookie) -> Result<()> {
+        let cookie = serde_json::json!({
+            "name": cookie.name,
+            "value": cookie.value,
+        })
+        .to_string();
+
+        let mut file =
+            File::create(&*self.get_cookie_path()?).context("Failed to create cookie file")?;
+        file.write_all(cookie.as_bytes())
+            .context("Failed to write cookie to file")?;
+
+        Ok(())
+    }
+
+    fn read_cookie_from_file(&self) -> Result<Option<AuthCookie>> {
+        let file = match File::open(&*self.get_cookie_path()?) {
+            Ok(file) => file,
+            Err(_) => return Ok(None),
         };
 
-        self.clear_browser_cookies()
-            .await
-            .context("Failed to clear browser cookies")
+        let reader = BufReader::new(file);
+        let cookie: AuthCookie =
+            serde_json::from_reader(reader).context("Failed to deserialize cookie from file")?;
+
+        Ok(Some(cookie))
     }
 }
 
-fn get_cookie_path() -> Result<String> {
-    let home = env::var("HOME")
-        .with_context(|| "Could not find home directory. $HOME system variable isn't set")?;
-    let cookie_path = format!("{home}/.local/share/maconomy-cli/maconomy_cookie");
-    Ok(cookie_path)
-}
-
-fn write_cookie_to_file(cookie: &Cookie) -> Result<()> {
-    let cookie = serde_json::json!({
-        "name": cookie.name,
-        "value": cookie.value,
-    })
-    .to_string();
-
-    let mut file = File::create(get_cookie_path()?).context("Failed to create cookie file")?;
-    file.write_all(cookie.as_bytes())
-        .context("Failed to write cookie to file")?;
-
-    Ok(())
-}
-
 // TODO: change Result to a cleaner type that is NotFound or Other
-fn read_cookie_from_file() -> Result<Option<AuthCookie>> {
-    let file = match File::open(get_cookie_path()?) {
-        Ok(file) => file,
-        Err(_) => return Ok(None),
-    };
-
-    let reader = BufReader::new(file);
-    let cookie: AuthCookie =
-        serde_json::from_reader(reader).context("Failed to deserialize cookie from file")?;
-
-    Ok(Some(cookie))
-}
-
 async fn get_maconomy_cookie(page: &Page) -> Option<Cookie> {
     page.get_cookies()
         .await
