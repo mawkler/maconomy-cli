@@ -310,6 +310,7 @@ impl MaconomyHttpClient {
         let concurrency_control = container_instance.concurrency_control.0;
         let instance_url = self.get_container_instance_url(&id);
         let url = format!("{instance_url}/data/panes/table/?row=end");
+        dbg!(&url);
         let body = json!({
             "data": {
                 "jobnumber": job_number,

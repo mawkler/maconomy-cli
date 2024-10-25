@@ -1,17 +1,28 @@
-use crate::helpers;
-use assert_cmd::Command;
+use crate::helpers::maconomy_mock::{
+    mock_add_row, mock_get_instance, mock_get_table_rows, mock_job_number_search, mock_set_hours,
+    mock_tasks_search,
+};
+use assert_cmd::{assert, Command};
 use std::{env, ffi, fs::File, io::Write};
 use wiremock::MockServer;
 
 const COOKIE_PATH: &str = "./integration_test_auth_cookie";
 
-fn run(
+fn run_json(
     args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
     server_url: &str,
 ) -> serde_json::Value {
-    env::set_var("MACONOMY__MACONOMY_URL", server_url);
-    let output = Command::cargo_bin("maconomy").unwrap().args(args).unwrap();
+    let output = run(args, server_url);
     serde_json::from_slice(&output.stdout).unwrap()
+}
+
+fn run(
+    args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
+    server_url: &str,
+) -> std::process::Output {
+    env::set_var("MACONOMY__MACONOMY_URL", server_url);
+    Command::cargo_bin("maconomy").unwrap().args(args).unwrap()
+    // output.stdout.into_output().to_string()
 }
 
 fn use_mock_auth_cookie_file() {
@@ -20,6 +31,7 @@ fn use_mock_auth_cookie_file() {
       "value": "\"mock_cookie_value\""
     });
 
+    // TODO: don't write to repo directory, it seems to infinitely re-trigger `cargo watch`
     let mut file = File::create(COOKIE_PATH).expect("failed to create mock cookie file");
     file.write_all(cookie.to_string().as_bytes())
         .expect("failed to write to mock cookie file");
@@ -32,19 +44,15 @@ fn use_mock_auth_cookie_file() {
 async fn test_get_timesheet() {
     // Given
     let mock_server = MockServer::start().await;
-    helpers::maconomy_mock::mock_get_instance(None)
-        .mount(&mock_server)
-        .await;
-    helpers::maconomy_mock::mock_get_table_rows(None)
-        .mount(&mock_server)
-        .await;
+    mock_get_instance(None).mount(&mock_server).await;
+    mock_get_table_rows(None).mount(&mock_server).await;
     use_mock_auth_cookie_file();
 
     let expected = serde_json::json!({
       "lines": [
         {
           "job": "Job One",
-          "task": "Development",
+          "task": "Some task one",
           "week": {
             "monday": 8.0,
             "tuesday": 0.0,
@@ -56,8 +64,8 @@ async fn test_get_timesheet() {
           }
         },
         {
-          "job": "Job Two",
-          "task": "More development",
+          "job": "Job One",
+          "task": "Some task two",
           "week": {
             "monday": 0.0,
             "tuesday": 0.0,
@@ -72,11 +80,36 @@ async fn test_get_timesheet() {
     });
 
     // When
-    let output = run(["get", "--format", "json"], &mock_server.uri());
+    let output = run_json(["get", "--format", "json"], &mock_server.uri());
 
     // Then
     assert_json_diff::assert_json_include!(
         expected: expected,
         actual: output
     );
+}
+
+#[tokio::main]
+#[test]
+async fn test_set_hours() {
+    // Given
+    let mock_server = MockServer::start().await;
+    mock_get_instance(None).mount(&mock_server).await;
+    mock_get_table_rows(None).mount(&mock_server).await;
+    mock_job_number_search(None).mount(&mock_server).await;
+    mock_set_hours(None).mount(&mock_server).await;
+    mock_tasks_search(None).mount(&mock_server).await;
+    mock_add_row(None).mount(&mock_server).await;
+    use_mock_auth_cookie_file();
+
+    // When
+    let output = run(
+        ["set", "--job", "job one", "--task", "some task one", "8"],
+        &mock_server.uri(),
+    );
+
+    // Then
+    assert!(output.status.success());
+
+    // TODO: perhaps also check that that the correct endpoint of the mock was called
 }

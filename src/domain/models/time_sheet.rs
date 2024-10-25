@@ -22,6 +22,11 @@ impl Line {
     pub(crate) fn new(job: String, task: String, week: Week) -> Self {
         Self { job, task, week }
     }
+
+    fn has_job_and_task(&self, job: &str, task: &str) -> bool {
+        self.job.to_lowercase() == job.to_lowercase()
+            && self.task.to_lowercase() == task.to_lowercase()
+    }
 }
 
 #[derive(Default, serde::Serialize)]
@@ -41,7 +46,7 @@ impl TimeSheet {
             .lines
             .iter()
             .enumerate()
-            .find(|(_, line)| line.job == job && line.task == task)?;
+            .find(|(_, line)| line.has_job_and_task(job, task))?;
 
         Some(row as u8)
     }

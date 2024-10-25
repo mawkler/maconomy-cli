@@ -74,7 +74,7 @@ impl HttpService {
                 .text()
                 .await
                 .unwrap_or_else(|_| "failed to decode request body".to_string());
-            bail!("Got {status} went wrong when sending request: {body}")
+            bail!("Got response '{status}': {body}")
         }
     }
 }

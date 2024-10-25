@@ -62,12 +62,12 @@ pub(crate) fn get_mock_table_rows_response() -> serde_json::Value {
                 "numberday5": 0,
                 "numberday6": 0,
                 "numberday7": 0,
-                "entrytext": "Development",
+                "entrytext": "Some task one",
                 "taskname": "300",
                 "instancekey": "1579ecb8-7773-4b69-b3ff-116da9dee8d8",
                 "timeregistrationunit": "hours",
                 "jobnamevar": "Job One",
-                "tasktextvar": "Development"
+                "tasktextvar": "Some task one"
               }
             },
             {
@@ -81,11 +81,11 @@ pub(crate) fn get_mock_table_rows_response() -> serde_json::Value {
                 "numberday6": 0,
                 "numberday7": 0,
                 "entrytext": "Job Two",
-                "taskname": "More development",
+                "taskname": "Some task two",
                 "instancekey": "265123e0-a069-44d2-bd60-8706f1a7d9b9",
                 "timeregistrationunit": "hours",
-                "jobnamevar": "Job Two",
-                "tasktextvar": "More development"
+                "jobnamevar": "Job One",
+                "tasktextvar": "Some task two"
               }
             }
           ]

@@ -80,7 +80,9 @@ pub(crate) async fn set(
     repository
         .set_time(hours, &day, job, task)
         .await
-        .with_context(|| format!("Failed to set {hours} hours on {day}, job {job}, task {task}"))?;
+        .with_context(|| {
+            format!("Failed to set {hours} hours on {day}, job '{job}', task '{task}'")
+        })?;
 
     info!("time sheet successfully set: {hours} hours on {day}");
 
