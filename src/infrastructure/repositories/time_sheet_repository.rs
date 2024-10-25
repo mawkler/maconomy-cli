@@ -239,6 +239,8 @@ impl TimeSheetRepository {
             .context(format!("Failed to get job number for job '{job}'"))?
             .ok_or(anyhow!("No job number found for job '{job}'"))?;
 
+        debug!("Got job number {job_number} for job {job}");
+
         self.client
             .get_tasks_for_job(&job_number)
             .await
