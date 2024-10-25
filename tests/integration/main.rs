@@ -1,3 +1,5 @@
 mod cli;
-mod maconomy_mock;
-mod mock_data;
+mod helpers {
+    pub(crate) mod maconomy_mock;
+    pub(crate) mod mock_data;
+}

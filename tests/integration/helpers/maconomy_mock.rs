@@ -1,10 +1,8 @@
 use serde_json::json;
+use uuid::Uuid;
 use wiremock::matchers::method;
 
-use crate::mock_data;
-
-// TODO: generate UUID dynamically
-const UUID: &str = "bdbcbf53-404d-49d9-98f9-597bbc8b283a";
+use super::mock_data;
 
 // Regex
 const UUID_REGEX: &str = "[a-z0-9-]{36}";
@@ -19,7 +17,7 @@ fn create_mock(
     response: Option<wiremock::ResponseTemplate>,
 ) -> wiremock::Mock {
     let default_response = wiremock::ResponseTemplate::new(200)
-        .append_header(MACONOMY_CONCURRENCY_CONTROL, UUID)
+        .append_header(MACONOMY_CONCURRENCY_CONTROL, Uuid::new_v4().to_string())
         .set_body_json(default_body);
     let response = response.unwrap_or(default_response);
 
@@ -28,12 +26,12 @@ fn create_mock(
         .respond_with(response)
 }
 
-pub(crate) fn mock_get_instances(response: Option<wiremock::ResponseTemplate>) -> wiremock::Mock {
+pub(crate) fn mock_get_instance(response: Option<wiremock::ResponseTemplate>) -> wiremock::Mock {
     let path_regex = format!("/containers/{COMPANY_REGEX}/timeregistration/instances$");
     let default_body = json!({
         "meta": {
             "containerName": "timeregistration",
-            "containerInstanceId": UUID
+            "containerInstanceId": Uuid::new_v4().to_string()
         }
     });
 

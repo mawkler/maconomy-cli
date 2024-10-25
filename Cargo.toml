@@ -28,6 +28,7 @@ tabled = {version = "0.16.0", features = ["ansi"]}
 owo-colors = "4"
 chrono = "0.4.38"
 color-print = "0.3.6"
+uuid = { version = "1.11.0", features = [ "v4", "fast-rng", "macro-diagnostics" ] }
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"

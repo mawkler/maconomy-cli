@@ -1,29 +1,33 @@
-use crate::maconomy_mock;
+// use crate::maconomy_mock;
 use assert_cmd::Command;
-use std::env;
+use std::{env, ffi};
 use wiremock::MockServer;
 
+use crate::helpers;
+
+fn run(
+    args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
+    server_url: &str,
+) -> serde_json::Value {
+    env::set_var("MACONOMY_MACONOMY_URL", server_url);
+    let output = Command::cargo_bin("maconomy").unwrap().args(args).unwrap();
+    serde_json::from_slice(&output.stdout).unwrap()
+}
+
+// TODO: deal with authentication
 #[tokio::main]
 #[test]
 async fn test_get_timesheet() {
     // Start a local mock HTTP server on a random port
     let mock_server = MockServer::start().await;
-
-    maconomy_mock::mock_get_instances(None)
+    helpers::maconomy_mock::mock_get_instance(None)
+        .mount(&mock_server)
+        .await;
+    helpers::maconomy_mock::mock_get_table_rows(None)
         .mount(&mock_server)
         .await;
 
-    maconomy_mock::mock_get_table_rows(None)
-        .mount(&mock_server)
-        .await;
-
-    env::set_var("MACONOMY_MACONOMY_URL", mock_server.uri());
-
-    let output = Command::cargo_bin("maconomy")
-        .unwrap()
-        .args(["get", "--format", "json"])
-        .unwrap();
-    let actual: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let output = run(["get", "--format", "json"], &mock_server.uri());
 
     let expected = serde_json::json!({
       "lines": [
@@ -58,6 +62,6 @@ async fn test_get_timesheet() {
 
     assert_json_diff::assert_json_include!(
         expected: expected,
-        actual: actual
+        actual: output
     );
 }
