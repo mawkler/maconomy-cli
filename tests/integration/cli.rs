@@ -2,11 +2,11 @@ use crate::helpers::maconomy_mock::{
     mock_add_row, mock_get_instance, mock_get_table_rows, mock_job_number_search, mock_set_hours,
     mock_tasks_search,
 };
-use assert_cmd::{assert, Command};
-use std::{env, ffi, fs::File, io::Write};
-use wiremock::MockServer;
+use assert_cmd::Command;
+use std::{env, ffi};
+use wiremock::{matchers::method, MockServer, ResponseTemplate};
 
-const COOKIE_PATH: &str = "./integration_test_auth_cookie";
+const COOKIE_PATH: &str = "tests/integration/helpers/integration_test_maconomy_cookie";
 
 fn run_json(
     args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
@@ -26,16 +26,6 @@ fn run(
 }
 
 fn use_mock_auth_cookie_file() {
-    let cookie = serde_json::json!({
-      "name": "Maconomy-mock-cookie",
-      "value": "\"mock_cookie_value\""
-    });
-
-    // TODO: don't write to repo directory, it seems to infinitely re-trigger `cargo watch`
-    let mut file = File::create(COOKIE_PATH).expect("failed to create mock cookie file");
-    file.write_all(cookie.to_string().as_bytes())
-        .expect("failed to write to mock cookie file");
-
     env::set_var("MACONOMY__AUTHENTICATION__SSO__COOKIE_PATH", COOKIE_PATH);
 }
 
