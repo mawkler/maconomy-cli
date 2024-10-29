@@ -2,9 +2,9 @@ use crate::helpers::maconomy_mock::{
     mock_add_row, mock_get_instance, mock_get_table_rows, mock_job_number_search, mock_set_hours,
     mock_tasks_search,
 };
-use assert_cmd::Command;
+use assert_cmd::{assert::OutputAssertExt, output::OutputOkExt, Command};
 use std::{env, ffi};
-use wiremock::{matchers::method, MockServer, ResponseTemplate};
+use wiremock::MockServer;
 
 const COOKIE_PATH: &str = "tests/integration/helpers/integration_test_maconomy_cookie";
 
@@ -86,10 +86,11 @@ async fn test_set_hours() {
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
-    mock_job_number_search(None).mount(&mock_server).await;
-    mock_set_hours(None).mount(&mock_server).await;
-    mock_tasks_search(None).mount(&mock_server).await;
+    // These mocks aren't actually required
+    // mock_job_number_search(None).mount(&mock_server).await;
+    // mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;
+    mock_set_hours(None).mount(&mock_server).await;
     use_mock_auth_cookie_file();
 
     // When
@@ -100,6 +101,30 @@ async fn test_set_hours() {
 
     // Then
     assert!(output.status.success());
+}
 
-    // TODO: perhaps also check that that the correct endpoint of the mock was called
+#[tokio::main]
+// #[test]
+async fn test_set_hours_err() {
+    // Given
+
+    let mock_server = MockServer::start().await;
+    mock_get_instance(None).mount(&mock_server).await;
+    mock_get_table_rows(None).mount(&mock_server).await;
+    mock_job_number_search(None).mount(&mock_server).await;
+    mock_set_hours(None).mount(&mock_server).await;
+    mock_tasks_search(None).mount(&mock_server).await;
+    mock_add_row(None).mount(&mock_server).await;
+    use_mock_auth_cookie_file();
+
+    // When
+    let output = run(
+        ["set", "--job", "doesn't exist", "--task", "some task", "8"],
+        &mock_server.uri(),
+    );
+
+    // Then
+    // TODO: `output.assert().failure()` doesn't seem to work. Is it because my program panics?
+    // dbg!(&output.stdout.into_output().to_string());
+    output.assert().failure();
 }

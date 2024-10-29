@@ -1,8 +1,7 @@
+use super::mock_data::{self, get_mock_table_rows_response};
 use serde_json::json;
 use uuid::Uuid;
 use wiremock::matchers::method;
-
-use super::mock_data::{self, get_mock_table_rows_response};
 
 // Regex
 const UUID_REGEX: &str = "[a-z0-9-]{36}";
