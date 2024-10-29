@@ -1,8 +1,8 @@
 use anyhow::{anyhow, bail, Context, Result};
-use log::debug;
+use log::{debug, info};
 use reqwest::{
     header::{HeaderMap, ACCEPT, CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT},
-    Client, RequestBuilder,
+    Client, RequestBuilder, StatusCode,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -50,6 +50,14 @@ pub(crate) struct MaconomyHttpClient {
 #[derive(Deserialize, Debug)]
 struct GetInstancesResponseBody {
     meta: Meta,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum AddRowError {
+    #[error("Week has not been initialized")]
+    WeekUninitialized,
+    #[error("Something went wrong when adding a new line to the time sheet: {0}")]
+    Unknown(#[from] anyhow::Error),
 }
 
 fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<String> {
@@ -305,7 +313,7 @@ impl MaconomyHttpClient {
         job_number: &str,
         task_name: &ShortTaskName,
         container_instance: ContainerInstance,
-    ) -> Result<(TimeRegistration, ConcurrencyControl)> {
+    ) -> Result<(TimeRegistration, ConcurrencyControl), AddRowError> {
         let id = container_instance.id.0;
         let concurrency_control = container_instance.concurrency_control.0;
         let instance_url = self.get_container_instance_url(&id);
@@ -326,14 +334,23 @@ impl MaconomyHttpClient {
             .body(body.to_string());
 
         let response = self.send_request(request).await?;
+        let concurrency_control = concurrency_control_from_headers(response.headers())?;
 
         let status = &response.status();
-        if !status.is_success() {
-            bail!("Server responded with {status}");
+        let response_body = response
+            .bytes()
+            .await
+            .context("Failed to get bytes from response body")?;
+
+        if is_uninitialized_week_error(&response_body).await? {
+            info!("Week has not been initialized");
+            return Err(AddRowError::WeekUninitialized);
+        } else if !status.is_success() {
+            return Err(anyhow!("Server responded with {status}").into());
         }
 
-        let concurrency_control = concurrency_control_from_headers(response.headers())?;
-        let time_registration = response.json().await.context("Failed to parse response")?;
+        let time_registration =
+            serde_json::from_slice(&response_body).context("Failed to parse response")?;
 
         Ok((time_registration, concurrency_control.into()))
     }
@@ -367,4 +384,16 @@ impl MaconomyHttpClient {
 
         Ok((time_registration, concurrency_control.into()))
     }
+}
+
+/// The response we get from maconomy if we try to set a value in the time registration without
+/// having initialized the week
+async fn is_uninitialized_week_error(response_body: &bytes::Bytes) -> Result<bool> {
+    let body: serde_json::Value = serde_json::from_slice(response_body)
+        .context("Failed to deserialize response body of 'set' conflict")?;
+
+    Ok(body.get("errorMessage").is_some_and(|msg| {
+        msg.as_str()
+            .is_some_and(|msg| msg.starts_with("Maconomy system error: "))
+    }))
 }

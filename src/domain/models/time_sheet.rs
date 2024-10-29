@@ -29,7 +29,7 @@ impl Line {
     }
 }
 
-#[derive(Default, serde::Serialize)]
+#[derive(Default, Debug, serde::Serialize)]
 pub(crate) struct TimeSheet {
     pub(crate) lines: Vec<Line>,
 }

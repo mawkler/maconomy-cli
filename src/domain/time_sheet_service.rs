@@ -21,4 +21,8 @@ impl TimeSheetService<'_> {
     ) -> Result<(), time_sheet_repository::SetTimeError> {
         self.repository.set_time(0.0, day, job, task).await
     }
+
+    pub(crate) async fn set(&mut self, hours: f32, day: &Day, job: &str, task: &str) {
+        self.repository.set_time(hours, day, job, task).await;
+    }
 }

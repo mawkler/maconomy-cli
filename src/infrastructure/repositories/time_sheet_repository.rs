@@ -1,4 +1,6 @@
-use super::maconomy_http_client::{ConcurrencyControl, ContainerInstance, MaconomyHttpClient};
+use super::maconomy_http_client::{
+    self, AddRowError, ConcurrencyControl, ContainerInstance, MaconomyHttpClient,
+};
 use crate::{
     domain::models::{
         day::Day,
@@ -12,7 +14,7 @@ use crate::{
     },
 };
 use anyhow::{anyhow, Context, Result};
-use log::{debug, info};
+use log::{debug, info, warn};
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum SetTimeError {
@@ -25,8 +27,8 @@ pub(crate) enum SetTimeError {
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum AddLineError {
-    #[error("Week has not been initialized")]
-    WeekUninitialized,
+    #[error(transparent)]
+    WeekUninitialized(#[from] maconomy_http_client::AddRowError),
     #[error("Job '{0}' not found")]
     JobNotFound(String),
     #[error("Task '{0}' not found")]
@@ -85,6 +87,20 @@ impl TimeSheetRepository {
         Ok(time_registration)
     }
 
+    async fn create_new_timesheet(&mut self) -> Result<()> {
+        let container_instance = self.get_container_instance().await?;
+        let (time_registration, concurrency_control) = self
+            .client
+            .create_timesheet(&container_instance)
+            .await
+            .context("Failed to create timesheet")?;
+
+        self.update_concurrency_control(concurrency_control);
+        self.time_registration = Some(time_registration.clone());
+
+        Ok(())
+    }
+
     /// Gets and caches time sheet
     pub(crate) async fn get_time_sheet(&mut self) -> Result<TimeSheet> {
         if let Some(time_registration) = &self.time_registration {
@@ -119,7 +135,7 @@ impl TimeSheetRepository {
         Ok(line_number)
     }
 
-    pub(crate) async fn set_time(
+    async fn try_set_time(
         &mut self,
         hours: f32,
         day: &Day,
@@ -149,6 +165,41 @@ impl TimeSheetRepository {
 
         // TODO: also update self.time_registration
         self.update_concurrency_control(concurrency_control);
+        Ok(())
+    }
+
+    pub(crate) async fn set_time(
+        &mut self,
+        hours: f32,
+        day: &Day,
+        job: &str,
+        task: &str,
+    ) -> Result<()> {
+        let result = self.try_set_time(hours, day, job, task).await;
+        if let Err(err) = result {
+            return match err {
+                // TODO: simplify WeekUninitialized error type
+                SetTimeError::AddLineError(AddLineError::WeekUninitialized(
+                    AddRowError::WeekUninitialized,
+                )) => {
+                    info!("Creating new timesheet");
+
+                    self.create_new_timesheet().await?;
+
+                    self.try_set_time(hours, day, job, task)
+                        .await
+                        .map_err(|err| {
+                            let msg = format!(
+                                "Failed to set time, even after creating a new timesheet: {err}"
+                            );
+                            warn!("{msg}");
+                            anyhow::anyhow!(msg)
+                        })
+                }
+                err => Err(err.into()),
+            };
+        };
+
         Ok(())
     }
 
@@ -204,8 +255,7 @@ impl TimeSheetRepository {
         let (time_registration, concurrecy_control) = self
             .client
             .add_new_row(&job_number, &task_name, container_instance)
-            .await
-            .context("Failed to add new row")?;
+            .await?;
 
         self.update_concurrency_control(concurrecy_control);
         self.time_registration = Some(time_registration.clone());
