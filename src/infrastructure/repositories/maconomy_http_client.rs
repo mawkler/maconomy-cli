@@ -56,7 +56,7 @@ struct GetInstancesResponseBody {
 pub(crate) enum AddRowError {
     #[error("Week has not been initialized")]
     WeekUninitialized,
-    #[error("Something went wrong when adding a new line to the time sheet: {0}")]
+    #[error("Something went wrong when adding a new row to the time registration")]
     Unknown(#[from] anyhow::Error),
 }
 
@@ -98,11 +98,7 @@ impl MaconomyHttpClient {
             .header(CONTENT_TYPE, MACONOMY_JSON)
             // Specifies the fields that we want from Maconomy
             .body(body);
-        let response = self
-            .http_service
-            .send_request_with_auth(&request)
-            .await
-            .context("Failed to send request")?;
+        let response = self.send_request(request).await?;
 
         let status = &response.status();
         if !status.is_success() {
@@ -130,18 +126,17 @@ impl MaconomyHttpClient {
     pub(crate) async fn create_timesheet(
         &self,
         container_instance: &ContainerInstance,
-    ) -> Result<(TimeRegistration, ConcurrencyControl)> {
+    ) -> Result<ConcurrencyControl> {
         let id = &container_instance.id.0;
         let instance_url = self.get_container_instance_url(id);
         let url = format!("{instance_url}/data/panes/card/0/action;name=createtimesheet");
-        // TODO: not sure if I need the concurrency control
         let concurrency_control = &container_instance.concurrency_control.0;
 
         let request = self
             .client
             .post(url)
+            .header(ACCEPT, MACONOMY_JSON_V5)
             .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
-            .header(CONTENT_TYPE, MACONOMY_JSON_V5)
             .header(CONTENT_LENGTH, 0)
             .header("Maconomy-Response-Type", "patch"); // TODO: this header value is probably not needed
 
@@ -153,9 +148,8 @@ impl MaconomyHttpClient {
         }
 
         let concurrency_control = concurrency_control_from_headers(response.headers())?;
-        let time_registration = response.json().await.context("Failed to parse response")?;
 
-        Ok((time_registration, concurrency_control.into()))
+        Ok(concurrency_control.into())
     }
 
     async fn send_request(&self, request: RequestBuilder) -> Result<reqwest::Response> {
@@ -333,8 +327,12 @@ impl MaconomyHttpClient {
             .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
             .body(body.to_string());
 
-        let response = self.send_request(request).await?;
-        let concurrency_control = concurrency_control_from_headers(response.headers())?;
+        let response = self
+            .http_service
+            .send_request_with_auth_allow_errors(&request)
+            .await?;
+
+        let concurrency_control = concurrency_control_from_headers(response.headers());
 
         let status = &response.status();
         let response_body = response
@@ -352,7 +350,7 @@ impl MaconomyHttpClient {
         let time_registration =
             serde_json::from_slice(&response_body).context("Failed to parse response")?;
 
-        Ok((time_registration, concurrency_control.into()))
+        Ok((time_registration, concurrency_control?.into()))
     }
 
     pub async fn delete_row(

@@ -57,13 +57,13 @@ impl AuthService {
             return Ok(cookie.clone());
         }
 
-        info!("Cookie not found in memory, attempting to read in from file");
+        debug!("Cookie not found in memory, attempting to read in from file");
         if let Some(cookie) = self.read_cookie_from_file()? {
-            info!("Found cookie in file");
+            debug!("Found cookie in file");
             return Ok(cookie.clone());
         }
 
-        info!("Cookie file not found, attempting to reauthenticate");
+        debug!("Cookie file not found, attempting to reauthenticate");
         self.reauthenticate()
             .await
             .context("Failed to reauthenticate")

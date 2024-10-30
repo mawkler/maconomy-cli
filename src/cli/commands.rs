@@ -82,9 +82,7 @@ pub(crate) async fn set(
         .await
         .unwrap_or_else(|err| {
             if let SetTimeError::Unknown(err) = err {
-                if let Some(source) = err.source() {
-                    println!("{}", error_stack_fmt(&err));
-                }
+                println!("{}", error_stack_fmt(&err));
             } else {
                 eprintln!("{err}");
             }
@@ -97,12 +95,15 @@ pub(crate) async fn clear(
     day: Option<Day>,
     service: &mut TimeSheetService<'_>,
 ) {
-    // TODO
     service
         .clear(job, task, &get_day(day))
         .await
         .unwrap_or_else(|err| {
-            eprintln!("{err}");
+            if let SetTimeError::Unknown(err) = err {
+                println!("{}", error_stack_fmt(&err));
+            } else {
+                eprintln!("{err}");
+            }
         });
 }
 

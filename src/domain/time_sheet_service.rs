@@ -47,6 +47,7 @@ impl TimeSheetService<'_> {
     ) -> Result<(), SetTimeError> {
         if let Err(err) = self.repository.set_time(hours, day, job, task).await {
             return match err {
+                AddLineError::WeekUninitialized(AddRowError::Unknown(err)) => todo!("{}", err),
                 AddLineError::WeekUninitialized(AddRowError::WeekUninitialized) => {
                     info!("Creating new timesheet");
 
@@ -67,7 +68,10 @@ impl TimeSheetService<'_> {
                 }
                 AddLineError::JobNotFound(err) => Err(SetTimeError::JobNotFound(err)),
                 AddLineError::TaskNotFound(err) => Err(SetTimeError::TaskNotFound(err)),
-                err => Err(anyhow::anyhow!(err).into()),
+                err => {
+                    warn!("{err}");
+                    Err(anyhow::anyhow!(err).into())
+                }
             };
         };
 

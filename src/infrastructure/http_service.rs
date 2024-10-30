@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use super::auth_service::{AuthCookie, AuthService};
 use anyhow::{bail, Context, Result};
-use log::{debug, warn};
+use log::debug;
 use reqwest::{
     header::{AUTHORIZATION, COOKIE},
     StatusCode,
@@ -32,17 +32,13 @@ impl HttpService {
         Self { auth_service }
     }
 
-    pub(crate) async fn send_request_with_auth(
+    async fn send_request_with_auth_retry(
         &self,
         request: &reqwest::RequestBuilder,
     ) -> Result<reqwest::Response> {
         let auth_cookie = self.auth_service.authenticate().await?;
         let response = send_with_cookie(request, auth_cookie).await?;
         let status = response.status();
-
-        if status.is_success() {
-            return Ok(response);
-        }
 
         debug!("Got status {status} from maconomy");
         if let StatusCode::UNAUTHORIZED = status {
@@ -56,28 +52,43 @@ impl HttpService {
 
             let response = send_with_cookie(request, auth_cookie).await?;
 
-            let status = response.status();
-            if status.is_success() {
-                Ok(response)
-            } else if let StatusCode::UNAUTHORIZED = status {
+            if let StatusCode::UNAUTHORIZED = response.status() {
                 panic!(
                     "Failed to reauthenticate. Try logging out with `maconomy logout`, and \
                     running your previous command again."
                 );
-            } else {
-                warn!("Got status code {status}");
-                let body = response
-                    .text()
-                    .await
-                    .context("Failed to get body of response")?;
-                bail!("Request failed with status {status}: {body}\nrequest: {request:?}");
             }
-        } else {
+
+            return Ok(response);
+        };
+
+        Ok(response)
+    }
+
+    pub(crate) async fn send_request_with_auth(
+        &self,
+        request: &reqwest::RequestBuilder,
+    ) -> Result<reqwest::Response> {
+        let response = self.send_request_with_auth_retry(request).await?;
+        let status = response.status();
+
+        if !status.is_success() {
             let body = response
                 .text()
                 .await
                 .context("failed to decode request body")?;
             bail!("Got response body {body}")
         }
+
+        Ok(response)
+    }
+
+    /// Like `send_request_with_auth`, but doesn't check the status code
+    pub(crate) async fn send_request_with_auth_allow_errors(
+        &self,
+        request: &reqwest::RequestBuilder,
+    ) -> Result<reqwest::Response> {
+        let response = self.send_request_with_auth_retry(request).await?;
+        Ok(response)
     }
 }

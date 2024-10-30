@@ -80,14 +80,13 @@ impl TimeSheetRepository {
 
     pub(crate) async fn create_new_timesheet(&mut self) -> Result<()> {
         let container_instance = self.get_container_instance().await?;
-        let (time_registration, concurrency_control) = self
+        let concurrency_control = self
             .client
             .create_timesheet(&container_instance)
             .await
             .context("Failed to create timesheet")?;
 
         self.update_concurrency_control(concurrency_control);
-        self.time_registration = Some(time_registration.clone());
 
         Ok(())
     }
@@ -206,7 +205,7 @@ impl TimeSheetRepository {
                 AddLineError::TaskNotFound(task.to_string())
             })?;
 
-        debug!("Adding new row");
+        debug!("Adding new line");
         let container_instance = self.get_container_instance().await?;
         let (time_registration, concurrecy_control) = self
             .client
