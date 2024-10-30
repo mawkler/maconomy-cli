@@ -5,13 +5,12 @@ use crate::{
         time_sheet_service::TimeSheetService,
     },
     infrastructure::{
-        auth_service::AuthService,
-        repositories::time_sheet_repository::{self, TimeSheetRepository},
+        auth_service::AuthService, repositories::time_sheet_repository::TimeSheetRepository,
     },
 };
 use anyhow::Context;
 use chrono::{Datelike, Local};
-use log::{error, info};
+use log::info;
 
 // TODO: allow setting week
 pub(crate) async fn get_table(
@@ -67,14 +66,6 @@ pub(crate) async fn get(
             .await
             .unwrap_or_else(|err| eprintln!("Failed to get time sheet as table: {err}")),
     }
-}
-
-#[derive(thiserror::Error, Debug)]
-pub(crate) enum SetTimeError {
-    #[error(transparent)]
-    Known(#[from] time_sheet_repository::SetTimeError),
-    #[error("Something went wrong when setting hours")]
-    Unknown(#[from] anyhow::Error),
 }
 
 pub(crate) async fn set(

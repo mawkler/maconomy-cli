@@ -2,7 +2,7 @@ use crate::helpers::maconomy_mock::{
     mock_add_row, mock_get_instance, mock_get_table_rows, mock_job_number_search, mock_set_hours,
     mock_tasks_search,
 };
-use assert_cmd::{assert::OutputAssertExt, output::OutputOkExt, Command};
+use assert_cmd::{assert::OutputAssertExt, Command};
 use std::{env, ffi};
 use wiremock::MockServer;
 

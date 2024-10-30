@@ -1,5 +1,5 @@
 use super::maconomy_http_client::{
-    self, AddRowError, ConcurrencyControl, ContainerInstance, MaconomyHttpClient,
+    self, ConcurrencyControl, ContainerInstance, MaconomyHttpClient,
 };
 use crate::{
     domain::models::{
@@ -14,16 +14,7 @@ use crate::{
     },
 };
 use anyhow::{anyhow, Context, Result};
-use log::{debug, info, warn};
-
-#[derive(thiserror::Error, Debug)]
-pub(crate) enum SetTimeError {
-    #[error(transparent)]
-    AddLineError(#[from] AddLineError),
-    #[error("Something went wrong when setting hours: {0}")]
-    Unknown(#[from] anyhow::Error),
-    // TODO: handle authentication error
-}
+use log::{debug, info};
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum AddLineError {
@@ -87,7 +78,7 @@ impl TimeSheetRepository {
         Ok(time_registration)
     }
 
-    async fn create_new_timesheet(&mut self) -> Result<()> {
+    pub(crate) async fn create_new_timesheet(&mut self) -> Result<()> {
         let container_instance = self.get_container_instance().await?;
         let (time_registration, concurrency_control) = self
             .client
@@ -135,13 +126,13 @@ impl TimeSheetRepository {
         Ok(line_number)
     }
 
-    async fn try_set_time(
+    pub(crate) async fn set_time(
         &mut self,
         hours: f32,
         day: &Day,
         job: &str,
         task: &str,
-    ) -> Result<(), SetTimeError> {
+    ) -> Result<(), AddLineError> {
         let time_sheet = self
             .get_time_sheet()
             .await
@@ -165,41 +156,6 @@ impl TimeSheetRepository {
 
         // TODO: also update self.time_registration
         self.update_concurrency_control(concurrency_control);
-        Ok(())
-    }
-
-    pub(crate) async fn set_time(
-        &mut self,
-        hours: f32,
-        day: &Day,
-        job: &str,
-        task: &str,
-    ) -> Result<()> {
-        let result = self.try_set_time(hours, day, job, task).await;
-        if let Err(err) = result {
-            return match err {
-                // TODO: simplify WeekUninitialized error type
-                SetTimeError::AddLineError(AddLineError::WeekUninitialized(
-                    AddRowError::WeekUninitialized,
-                )) => {
-                    info!("Creating new timesheet");
-
-                    self.create_new_timesheet().await?;
-
-                    self.try_set_time(hours, day, job, task)
-                        .await
-                        .map_err(|err| {
-                            let msg = format!(
-                                "Failed to set time, even after creating a new timesheet: {err}"
-                            );
-                            warn!("{msg}");
-                            anyhow::anyhow!(msg)
-                        })
-                }
-                err => Err(err.into()),
-            };
-        };
-
         Ok(())
     }
 

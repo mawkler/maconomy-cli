@@ -2,7 +2,7 @@ use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info};
 use reqwest::{
     header::{HeaderMap, ACCEPT, CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT},
-    Client, RequestBuilder, StatusCode,
+    Client, RequestBuilder,
 };
 use serde::Deserialize;
 use serde_json::json;
