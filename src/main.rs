@@ -12,6 +12,7 @@ mod cli;
 mod config;
 mod domain;
 mod infrastructure;
+mod utils;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -44,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
             day,
             job,
             task,
-        } => commands::set(hours, day, &job, &task, &mut repository).await,
+        } => commands::set(hours, day, &job, &task, &mut time_sheet_service).await,
         Command::Clear { job, task, day } => {
             commands::clear(&job, &task, day, &mut time_sheet_service).await
         }

@@ -100,7 +100,7 @@ impl MaconomyHttpClient {
             .body(body);
         let response = self
             .http_service
-            .send_request_with_auth(request)
+            .send_request_with_auth(&request)
             .await
             .context("Failed to send request")?;
 
@@ -161,7 +161,7 @@ impl MaconomyHttpClient {
     async fn send_request(&self, request: RequestBuilder) -> Result<reqwest::Response> {
         let request = request.header(USER_AGENT, "Maconomy CLI");
         self.http_service
-            .send_request_with_auth(request)
+            .send_request_with_auth(&request)
             .await
             .context("Failed to send request")
     }

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use super::auth_service::{AuthCookie, AuthService};
 use anyhow::{bail, Context, Result};
-use log::debug;
+use log::{debug, warn};
 use reqwest::{
     header::{AUTHORIZATION, COOKIE},
     StatusCode,
@@ -21,7 +21,6 @@ async fn send_with_cookie(
         .context("Failed to clone request")?
         .header(COOKIE, auth_cookie.to_string())
         .header(AUTHORIZATION, format!("X-Cookie {}", auth_cookie.name));
-    debug!("Sending request {request:?}");
     request
         .send()
         .await
@@ -35,10 +34,10 @@ impl HttpService {
 
     pub(crate) async fn send_request_with_auth(
         &self,
-        request: reqwest::RequestBuilder,
+        request: &reqwest::RequestBuilder,
     ) -> Result<reqwest::Response> {
         let auth_cookie = self.auth_service.authenticate().await?;
-        let response = send_with_cookie(&request, auth_cookie).await?;
+        let response = send_with_cookie(request, auth_cookie).await?;
         let status = response.status();
 
         if status.is_success() {
@@ -46,7 +45,7 @@ impl HttpService {
         }
 
         debug!("Got status {status} from maconomy");
-        if let StatusCode::UNAUTHORIZED = response.status() {
+        if let StatusCode::UNAUTHORIZED = status {
             debug!("Attempting to reauthenticate");
             // Reauthenticate (session cookie may have timed out)
             let auth_cookie = self
@@ -55,7 +54,7 @@ impl HttpService {
                 .await
                 .context("Failed to reauthenticate")?;
 
-            let response = send_with_cookie(&request, auth_cookie).await?;
+            let response = send_with_cookie(request, auth_cookie).await?;
 
             let status = response.status();
             if status.is_success() {
@@ -66,15 +65,19 @@ impl HttpService {
                     running your previous command again."
                 );
             } else {
-                let body = response.text().await?;
+                warn!("Got status code {status}");
+                let body = response
+                    .text()
+                    .await
+                    .context("Failed to get body of response")?;
                 bail!("Request failed with status {status}: {body}\nrequest: {request:?}");
             }
         } else {
             let body = response
                 .text()
                 .await
-                .unwrap_or_else(|_| "failed to decode request body".to_string());
-            bail!("Got response '{status}': {body}")
+                .context("failed to decode request body")?;
+            bail!("Got response body {body}")
         }
     }
 }

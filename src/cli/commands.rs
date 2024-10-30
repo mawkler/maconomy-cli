@@ -2,11 +2,12 @@ use super::arguments::Format;
 use crate::{
     domain::{
         models::{day::Day, line_number::LineNumber},
-        time_sheet_service::TimeSheetService,
+        time_sheet_service::{SetTimeError, TimeSheetService},
     },
     infrastructure::{
         auth_service::AuthService, repositories::time_sheet_repository::TimeSheetRepository,
     },
+    utils::errors::error_stack_fmt,
 };
 use anyhow::Context;
 use chrono::{Datelike, Local};
@@ -73,14 +74,20 @@ pub(crate) async fn set(
     day: Option<Day>,
     job: &str,
     task: &str,
-    repository: &mut TimeSheetRepository,
+    service: &mut TimeSheetService<'_>,
 ) {
     let day = get_day(day);
-    repository
+    service
         .set_time(hours, &day, job, task)
         .await
         .unwrap_or_else(|err| {
-            eprintln!("{err}");
+            if let SetTimeError::Unknown(err) = err {
+                if let Some(source) = err.source() {
+                    println!("{}", error_stack_fmt(&err));
+                }
+            } else {
+                eprintln!("{err}");
+            }
         });
 }
 
