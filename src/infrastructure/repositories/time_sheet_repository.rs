@@ -28,15 +28,15 @@ pub(crate) enum AddLineError {
     Unknown(#[from] anyhow::Error),
 }
 
-pub(crate) struct TimeSheetRepository {
-    client: MaconomyHttpClient,
+pub(crate) struct TimeSheetRepository<'a> {
+    client: MaconomyHttpClient<'a>,
     container_instance: Option<ContainerInstance>,
     time_registration: Option<TimeRegistration>,
 }
 
-impl TimeSheetRepository {
-    pub(crate) fn new(repository: MaconomyHttpClient) -> Self {
-        Self {
+impl TimeSheetRepository<'_> {
+    pub(crate) fn new(repository: MaconomyHttpClient) -> TimeSheetRepository {
+        TimeSheetRepository {
             client: repository,
             container_instance: None,
             time_registration: None,

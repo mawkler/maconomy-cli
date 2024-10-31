@@ -19,17 +19,17 @@ pub(crate) enum SetTimeError {
     // TODO: handle authentication error
 }
 
-pub(crate) struct TimeSheetService {
-    repository: Rc<Mutex<TimeSheetRepository>>,
+pub(crate) struct TimeSheetService<'a> {
+    repository: Rc<Mutex<TimeSheetRepository<'a>>>,
 }
 
-impl TimeSheetService {
-    pub(crate) fn new(repository: Rc<Mutex<TimeSheetRepository>>) -> Self {
-        Self { repository }
+impl TimeSheetService<'_> {
+    pub(crate) fn new(repository: Rc<Mutex<TimeSheetRepository>>) -> TimeSheetService {
+        TimeSheetService { repository }
     }
 }
 
-impl TimeSheetService {
+impl TimeSheetService<'_> {
     pub(crate) async fn clear(
         &mut self,
         job: &str,

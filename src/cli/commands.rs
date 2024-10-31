@@ -15,18 +15,18 @@ use log::info;
 use std::rc::Rc;
 use tokio::sync::Mutex;
 
-pub struct CommandClient {
-    pub repository: Rc<Mutex<TimeSheetRepository>>,
-    pub time_sheet_service: Rc<Mutex<TimeSheetService>>,
-    pub auth_service: Rc<AuthService>,
+pub struct CommandClient<'a> {
+    pub repository: Rc<Mutex<TimeSheetRepository<'a>>>,
+    pub time_sheet_service: Rc<Mutex<TimeSheetService<'a>>>,
+    pub auth_service: &'a AuthService,
 }
 
-impl CommandClient {
+impl<'a> CommandClient<'a> {
     pub fn new(
-        repository: Rc<Mutex<TimeSheetRepository>>,
-        time_sheet_service: Rc<Mutex<TimeSheetService>>,
-        auth_service: Rc<AuthService>,
-    ) -> CommandClient {
+        repository: Rc<Mutex<TimeSheetRepository<'a>>>,
+        time_sheet_service: Rc<Mutex<TimeSheetService<'a>>>,
+        auth_service: &'a AuthService,
+    ) -> CommandClient<'a> {
         CommandClient {
             repository,
             time_sheet_service,

@@ -28,8 +28,8 @@ async fn main() -> anyhow::Result<()> {
         .get_optional_value("authentication.sso.cookie_path")?
         .unwrap_or("~/.local/share/maconomy-cli/maconomy_cookie".to_string());
 
-    let auth_service = Rc::from(AuthService::new(login_url, cookie_path));
-    let http_service = HttpService::new(auth_service.clone());
+    let auth_service = AuthService::new(login_url, cookie_path);
+    let http_service = HttpService::new(&auth_service);
     let client = reqwest::Client::builder()
         .cookie_store(true)
         .build()
@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     let mut command_client = CommandClient::new(
         repository.clone(),
         time_sheet_service.clone(),
-        auth_service.clone(),
+        &auth_service,
     );
 
     match parse_arguments() {

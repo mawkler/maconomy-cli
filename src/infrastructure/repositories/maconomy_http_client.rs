@@ -40,9 +40,9 @@ pub(crate) struct ContainerInstance {
     pub(crate) concurrency_control: ConcurrencyControl,
 }
 
-pub(crate) struct MaconomyHttpClient {
+pub(crate) struct MaconomyHttpClient<'a> {
     client: Client,
-    http_service: HttpService,
+    http_service: HttpService<'a>,
     url: String,
     company_name: String,
 }
@@ -67,14 +67,14 @@ fn concurrency_control_from_headers(headers: &HeaderMap) -> Result<String> {
         .ok_or_else(|| anyhow!("Failed to extract concurrency control from headers"))
 }
 
-impl MaconomyHttpClient {
+impl MaconomyHttpClient<'_> {
     pub fn new(
         url: String,
         company_name: String,
         client: Client,
         http_service: HttpService,
-    ) -> Self {
-        Self {
+    ) -> MaconomyHttpClient {
+        MaconomyHttpClient {
             url,
             http_service,
             company_name,

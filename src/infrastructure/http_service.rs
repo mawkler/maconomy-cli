@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use super::auth_service::{AuthCookie, AuthService};
 use anyhow::{bail, Context, Result};
 use log::debug;
@@ -8,8 +6,8 @@ use reqwest::{
     StatusCode,
 };
 
-pub struct HttpService {
-    auth_service: Rc<AuthService>,
+pub struct HttpService<'a> {
+    auth_service: &'a AuthService,
 }
 
 async fn send_with_cookie(
@@ -27,9 +25,9 @@ async fn send_with_cookie(
         .context("Failed to send authenticated request")
 }
 
-impl HttpService {
-    pub(crate) fn new(auth_service: Rc<AuthService>) -> Self {
-        Self { auth_service }
+impl HttpService<'_> {
+    pub(crate) fn new(auth_service: &AuthService) -> HttpService {
+        HttpService { auth_service }
     }
 
     async fn send_request_with_auth_retry(
