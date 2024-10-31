@@ -1,12 +1,13 @@
 use anyhow::Context;
 use cli::arguments::{parse_arguments, Command};
-use cli::commands;
+use cli::commands::CommandClient;
 use config::Configuration;
 use domain::time_sheet_service::TimeSheetService;
 use infrastructure::repositories::maconomy_http_client::MaconomyHttpClient;
 use infrastructure::repositories::time_sheet_repository::TimeSheetRepository;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
 use std::rc::Rc;
+use tokio::sync::Mutex;
 
 mod cli;
 mod config;
@@ -35,25 +36,29 @@ async fn main() -> anyhow::Result<()> {
         .context("Failed to create HTTP client")?;
 
     let client = MaconomyHttpClient::new(url, company_name, client, http_service);
-    let mut repository = TimeSheetRepository::new(client);
-    let mut time_sheet_service = TimeSheetService::new(&mut repository);
+    let repository = Rc::new(Mutex::new(TimeSheetRepository::new(client)));
+    let time_sheet_service = Rc::new(Mutex::new(TimeSheetService::new(repository.clone())));
+    let mut command_client = CommandClient::new(
+        repository.clone(),
+        time_sheet_service.clone(),
+        auth_service.clone(),
+    );
 
     match parse_arguments() {
-        Command::Get { week, format } => commands::get(week, format, &mut repository).await,
+        Command::Get { week, format } => command_client.get(week, format).await,
         Command::Set {
             hours,
             day,
             job,
             task,
-        } => commands::set(hours, day, &job, &task, &mut time_sheet_service).await,
-        Command::Clear { job, task, day } => {
-            commands::clear(&job, &task, day, &mut time_sheet_service).await
-        }
-        Command::Submit => commands::submit(&mut repository).await,
-        Command::Logout => commands::logout(&auth_service.clone()).await,
+        } => command_client.set(hours, day, &job, &task).await,
+        Command::Clear { job, task, day } => command_client.clear(&job, &task, day).await,
+        // TODO: haven't actually tested this yet (can only be tested once a week)
+        Command::Submit => command_client.submit().await,
+        Command::Logout => command_client.logout().await,
         Command::Line(line) => match line {
             cli::arguments::Line::Delete { line_number } => {
-                commands::delete(&line_number, &mut repository).await
+                command_client.delete(&line_number).await
             }
         },
     };

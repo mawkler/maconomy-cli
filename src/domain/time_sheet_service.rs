@@ -5,6 +5,8 @@ use crate::infrastructure::repositories::time_sheet_repository::{
 };
 use anyhow::Result;
 use log::{info, warn};
+use std::rc::Rc;
+use tokio::sync::Mutex;
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum SetTimeError {
@@ -17,17 +19,17 @@ pub(crate) enum SetTimeError {
     // TODO: handle authentication error
 }
 
-pub(crate) struct TimeSheetService<'a> {
-    repository: &'a mut TimeSheetRepository,
+pub(crate) struct TimeSheetService {
+    repository: Rc<Mutex<TimeSheetRepository>>,
 }
 
-impl<'a> TimeSheetService<'a> {
-    pub(crate) fn new(repository: &'a mut TimeSheetRepository) -> Self {
+impl TimeSheetService {
+    pub(crate) fn new(repository: Rc<Mutex<TimeSheetRepository>>) -> Self {
         Self { repository }
     }
 }
 
-impl TimeSheetService<'_> {
+impl TimeSheetService {
     pub(crate) async fn clear(
         &mut self,
         job: &str,
@@ -45,15 +47,16 @@ impl TimeSheetService<'_> {
         job: &str,
         task: &str,
     ) -> Result<(), SetTimeError> {
-        if let Err(err) = self.repository.set_time(hours, day, job, task).await {
+        let mut repository = self.repository.lock().await;
+        if let Err(err) = repository.set_time(hours, day, job, task).await {
             return match err {
                 AddLineError::WeekUninitialized(AddRowError::Unknown(err)) => todo!("{}", err),
                 AddLineError::WeekUninitialized(AddRowError::WeekUninitialized) => {
                     info!("Creating new timesheet");
 
-                    self.repository.create_new_timesheet().await?;
+                    repository.create_new_timesheet().await?;
 
-                    self.repository
+                    repository
                         .set_time(hours, day, job, task)
                         .await
                         .map_err(|err| {
