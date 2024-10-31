@@ -5,6 +5,12 @@ Maconomy command-line interface for interacting with time sheets.
 > [!NOTE]
 > This repo is in an early stage. Expect some minor issues and breaking changes.
 
+## Features
+
+- Editing and viewing time sheet
+- Automatically instantiating new week if it hasn't been created yet
+- Automatically creating new lines if the job/task combination isn't in the time sheet
+
 ## Usage
 
 ```
@@ -27,20 +33,21 @@ Maconomy command-line interface for interacting with time sheets
 Usage: maconomy <COMMAND>
 
 Commands:
-get Get the time sheet for the current week
-set Set number of hours on some day for a given job and task
-clear Remove hours hours on some day for a given job and task
-logout Log out
-help Print this message or the help of the given subcommand(s)
+  get     Get the time sheet for the current week
+  set     Set number of hours on some day for a given job and task
+  clear   Remove hours hours on some day for a given job and task
+  logout  Log out
+  line    Operate on entire lines in the time sheet
+  help    Print this message or the help of the given subcommand(s)
 
 Options:
--h, --help Print help
--V, --version Print version
+  -h, --help     Print help
+  -V, --version  Print version
 
 Examples:
-maconomy get
-maconomy set --job '<job name>' --task '<task name>' --day tuesday 8
-maconomy clear --job '<job name>' --task '<task name>'
+  maconomy get
+  maconomy set --job '<job name>' --task '<task name>' --day tuesday 8
+  maconomy clear --job '<job name>' --task '<task name>'
 
 NOTE: currently you can only interact with the current week. In the future you'll be able to specify any week.
 ```
