@@ -271,6 +271,19 @@ impl TimeSheetRepository {
             .await
             .with_context(|| format!("Failed to get tasks for job '{job}'"))
     }
+
+    pub(crate) async fn submit(&mut self) -> Result<()> {
+        let container_instance = self.get_container_instance().await?;
+        let concurrency_control = self
+            .client
+            .submit(&container_instance)
+            .await
+            .context("Failed to submit")?;
+
+        self.update_concurrency_control(concurrency_control);
+
+        Ok(())
+    }
 }
 
 impl From<TableRecord> for Line {

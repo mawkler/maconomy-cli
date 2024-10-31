@@ -75,6 +75,9 @@ pub enum Command {
         day: Option<Day>,
     },
 
+    /// Submit time sheet for week
+    Submit,
+
     /// Log out
     Logout,
 

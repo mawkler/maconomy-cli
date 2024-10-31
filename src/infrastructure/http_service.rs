@@ -55,7 +55,7 @@ impl HttpService {
             if let StatusCode::UNAUTHORIZED = response.status() {
                 panic!(
                     "Failed to reauthenticate. Try logging out with `maconomy logout`, and \
-                    running your previous command again."
+                    running your previous command again. You'll then get asked to sign in again."
                 );
             }
 
@@ -77,7 +77,7 @@ impl HttpService {
                 .text()
                 .await
                 .context("failed to decode request body")?;
-            bail!("Got response body {body}")
+            bail!("Got response status '{status}' and the following body from maconomy: {body}")
         }
 
         Ok(response)

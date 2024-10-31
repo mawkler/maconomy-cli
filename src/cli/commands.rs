@@ -125,3 +125,9 @@ pub(crate) async fn delete(line_number: &LineNumber, repository: &mut TimeSheetR
             eprintln!("Failed to delete line {line_number:?}: {err}");
         });
 }
+
+pub(crate) async fn submit(repository: &mut TimeSheetRepository) {
+    repository.submit().await.unwrap_or_else(|err| {
+        eprintln!("Failed to submit: {err}");
+    });
+}

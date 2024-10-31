@@ -378,6 +378,28 @@ impl MaconomyHttpClient {
 
         Ok((time_registration, concurrency_control.into()))
     }
+
+    // TODO: hasn't been tested yet
+    pub(crate) async fn submit(
+        &self,
+        container_instance: &ContainerInstance,
+    ) -> Result<ConcurrencyControl> {
+        let instance_url = self.get_container_instance_url(&container_instance.id.0);
+        let url = format!("{instance_url}/data/panes/card/0/action;name=submittimesheet");
+        let concurrency_control = &container_instance.concurrency_control.0;
+
+        let request = self
+            .client
+            .post(url)
+            .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
+            .header(ACCEPT, MACONOMY_JSON_V5)
+            .header(CONTENT_LENGTH, 0);
+
+        let response = self.send_request(request).await?;
+
+        let concurrency_control = concurrency_control_from_headers(response.headers())?;
+        Ok(concurrency_control.into())
+    }
 }
 
 /// The response we get from maconomy if we try to set a value in the time registration without
