@@ -127,8 +127,7 @@ impl MaconomyHttpClient {
         &self,
         container_instance: &ContainerInstance,
     ) -> Result<ConcurrencyControl> {
-        let id = &container_instance.id.0;
-        let instance_url = self.get_container_instance_url(id);
+        let instance_url = self.get_container_instance_url(&container_instance.id.0);
         let url = format!("{instance_url}/data/panes/card/0/action;name=createtimesheet");
         let concurrency_control = &container_instance.concurrency_control.0;
 
@@ -164,8 +163,7 @@ impl MaconomyHttpClient {
         &self,
         container_instance: &ContainerInstance,
     ) -> Result<(TimeRegistration, ConcurrencyControl)> {
-        let id = &container_instance.id.0;
-        let instance_url = self.get_container_instance_url(id);
+        let instance_url = self.get_container_instance_url(&container_instance.id.0);
         let url = format!("{instance_url}/data;any");
         let concurrency_control = &container_instance.concurrency_control.0;
 
@@ -196,11 +194,10 @@ impl MaconomyHttpClient {
         hours: f32,
         day: u8,
         row: u8,
-        container_instance: ContainerInstance,
+        container_instance: &ContainerInstance,
     ) -> Result<ConcurrencyControl> {
-        let id = container_instance.id.0;
-        let concurrency_control = container_instance.concurrency_control.0;
-        let instance_url = self.get_container_instance_url(&id);
+        let concurrency_control = &container_instance.concurrency_control.0;
+        let instance_url = self.get_container_instance_url(&container_instance.id.0);
         let url = format!("{instance_url}/data/panes/table/{row}");
 
         let day = format!("numberday{day}");
@@ -306,11 +303,10 @@ impl MaconomyHttpClient {
         &self,
         job_number: &str,
         task_name: &ShortTaskName,
-        container_instance: ContainerInstance,
+        container_instance: &ContainerInstance,
     ) -> Result<(TimeRegistration, ConcurrencyControl), AddRowError> {
-        let id = container_instance.id.0;
-        let concurrency_control = container_instance.concurrency_control.0;
-        let instance_url = self.get_container_instance_url(&id);
+        let concurrency_control = &container_instance.concurrency_control.0;
+        let instance_url = self.get_container_instance_url(&container_instance.id.0);
         let url = format!("{instance_url}/data/panes/table/?row=end");
         let body = json!({
             "data": {
@@ -353,14 +349,14 @@ impl MaconomyHttpClient {
         Ok((time_registration, concurrency_control?.into()))
     }
 
-    pub async fn delete_row(
+    pub(crate) async fn delete_row(
         &self,
         line_number: u8,
-        container_instance: ContainerInstance,
+        container_instance: &ContainerInstance,
     ) -> Result<(TimeRegistration, ConcurrencyControl)> {
-        let id = container_instance.id.0;
-        let concurrency_control = container_instance.concurrency_control.0;
-        let instance_url = self.get_container_instance_url(&id);
+        let id = &container_instance.id.0;
+        let concurrency_control = &container_instance.concurrency_control.0;
+        let instance_url = self.get_container_instance_url(id);
         let url = format!("{instance_url}/data/panes/table/{line_number}");
 
         let request = self

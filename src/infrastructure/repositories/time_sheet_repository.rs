@@ -147,7 +147,7 @@ impl TimeSheetRepository {
 
         let concurrency_control = self
             .client
-            .set_time(hours, day.clone().into(), line_number, container_instance)
+            .set_time(hours, day.clone().into(), line_number, &container_instance)
             .await
             .with_context(|| {
                 format!("Failed to set {hours} hours on day {day}, row {line_number}")
@@ -209,7 +209,7 @@ impl TimeSheetRepository {
         let container_instance = self.get_container_instance().await?;
         let (time_registration, concurrecy_control) = self
             .client
-            .add_new_row(&job_number, &task_name, container_instance)
+            .add_new_row(&job_number, &task_name, &container_instance)
             .await?;
 
         self.update_concurrency_control(concurrecy_control);
@@ -243,7 +243,7 @@ impl TimeSheetRepository {
 
         let (time_registration, concurrecy_control) = self
             .client
-            .delete_row(line_number - 1, container_instance)
+            .delete_row(line_number - 1, &container_instance)
             .await
             .with_context(|| format!("Failed to delete line number {line_number}"))?;
 
