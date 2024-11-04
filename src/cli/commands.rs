@@ -15,6 +15,13 @@ use log::info;
 use std::rc::Rc;
 use tokio::sync::Mutex;
 
+macro_rules! exit_with_error {
+    ($($arg:tt)*) => {{
+        eprintln!($($arg)*);
+        std::process::exit(1);
+    }};
+}
+
 pub struct CommandClient<'a> {
     pub repository: Rc<Mutex<TimeSheetRepository<'a>>>,
     pub time_sheet_service: Rc<Mutex<TimeSheetService<'a>>>,
@@ -62,15 +69,12 @@ impl<'a> CommandClient<'a> {
     pub(crate) async fn get(&self, week: Option<u8>, format: Option<Format>) {
         let format = format.unwrap_or(Format::Table);
         match format {
-            Format::Json => self
-                .get_json(week)
-                .await
-                .unwrap_or_else(|err| eprintln!("Failed to get time sheet as JSON: {err}")),
-            Format::Table => self
-                .get_table(week)
-                .await
-                .unwrap_or_else(|err| eprintln!("Failed to get time sheet as table: {err}")),
+            Format::Json => self.get_json(week).await.context("JSON"),
+            Format::Table => self.get_table(week).await.context("table"),
         }
+        .unwrap_or_else(|err| {
+            exit_with_error!("Failed to get time sheet as {}", error_stack_fmt(&err));
+        })
     }
 
     pub(crate) async fn set(&mut self, hours: f32, days: Option<&[Day]>, job: &str, task: &str) {
@@ -82,9 +86,9 @@ impl<'a> CommandClient<'a> {
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
-                    println!("{}", error_stack_fmt(&err));
+                    exit_with_error!("{}", error_stack_fmt(&err));
                 } else {
-                    eprintln!("{err}");
+                    exit_with_error!("{err}");
                 }
             });
     }
@@ -97,21 +101,17 @@ impl<'a> CommandClient<'a> {
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
-                    println!("{}", error_stack_fmt(&err));
+                    exit_with_error!("{}", error_stack_fmt(&err));
                 } else {
-                    eprintln!("{err}");
+                    exit_with_error!("{err}");
                 }
             });
     }
 
     pub(crate) async fn logout(&self) {
-        self.auth_service
-            .logout()
-            .await
-            .context("Logout failed")
-            .unwrap_or_else(|err| {
-                eprintln!("Logout failed: {err}");
-            });
+        self.auth_service.logout().await.unwrap_or_else(|err| {
+            exit_with_error!("Logout failed: {}", error_stack_fmt(&err));
+        });
     }
 
     pub(crate) async fn delete(&mut self, line_number: &LineNumber) {
@@ -121,7 +121,8 @@ impl<'a> CommandClient<'a> {
             .delete_line(line_number)
             .await
             .unwrap_or_else(|err| {
-                eprintln!("Failed to delete line {line_number:?}: {err}");
+                let source = error_stack_fmt(&err);
+                exit_with_error!("Failed to delete line {line_number:?}: {source}");
             });
     }
 
@@ -132,7 +133,7 @@ impl<'a> CommandClient<'a> {
             .submit()
             .await
             .unwrap_or_else(|err| {
-                eprintln!("Failed to submit: {err}");
+                exit_with_error!("Failed to submit: {}", error_stack_fmt(&err));
             });
     }
 }

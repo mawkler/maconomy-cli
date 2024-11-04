@@ -71,7 +71,10 @@ impl AuthService {
     }
 
     pub(crate) async fn reauthenticate(&self) -> Result<AuthCookie> {
-        let cookie = self.open_browser_and_authenticate().await?;
+        let cookie = self
+            .open_browser_and_authenticate()
+            .await
+            .context("Failed to authenticate user through web browser")?;
 
         self.write_cookie_to_file(&cookie)?;
 
