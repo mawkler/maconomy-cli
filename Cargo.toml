@@ -8,9 +8,9 @@ description = "Maconomy command-line interface for interacting with time sheets"
 name = "maconomy"
 path = "src/main.rs"
 
-[lints.rust]
-dead_code = "allow"
-unused_variables = "allow"
+# [lints.rust]
+# dead_code = "allow"
+# unused_variables = "allow"
 
 [dependencies]
 anyhow = "1.0.92"
@@ -32,6 +32,7 @@ uuid = { version = "1.11.0", features = [ "v4", "fast-rng", "macro-diagnostics" 
 shellexpand = "3.1.0"
 thiserror = "1.0.67"
 bytes = "1.8.0"
+nom = "7.1.3"
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"

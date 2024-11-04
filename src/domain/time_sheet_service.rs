@@ -4,7 +4,7 @@ use crate::infrastructure::repositories::time_sheet_repository::{
     AddLineError, TimeSheetRepository,
 };
 use anyhow::Result;
-use log::{info, warn};
+use log::warn;
 use std::rc::Rc;
 use tokio::sync::Mutex;
 
@@ -52,7 +52,7 @@ impl TimeSheetService<'_> {
             return match err {
                 AddLineError::WeekUninitialized(AddRowError::Unknown(err)) => todo!("{}", err),
                 AddLineError::WeekUninitialized(AddRowError::WeekUninitialized) => {
-                    info!("Creating new timesheet");
+                    eprintln!("Creating new timesheet...");
 
                     repository.create_new_timesheet().await?;
 

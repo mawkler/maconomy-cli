@@ -15,6 +15,17 @@ mod domain;
 mod infrastructure;
 mod utils;
 
+#[derive(Debug, Clone)]
+pub(crate) enum Day {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init(); // Enable logging

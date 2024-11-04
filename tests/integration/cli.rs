@@ -104,7 +104,8 @@ async fn test_set_hours() {
 }
 
 #[tokio::main]
-// #[test]
+#[test]
+#[ignore]
 async fn test_set_hours_err() {
     // Given
 
