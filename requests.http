@@ -1,6 +1,12 @@
-# Set these
-@company = <your_company_name>
-@company = <your_base_url>
+# These are read from a `.env` file
+@base_url = {{BASE_URL}}
+@company = {{COMPANY}}
+
+@cookie_name = {{COOKIE_NAME}}
+@cookie_value = {{COOKIE_VALUE}}
+
+@job_name={{JOB_NAME}}
+@job_number = {{JOB_NUMBER}}
 
 ###
 
@@ -59,7 +65,7 @@ Maconomy-Concurrency-Control: {{concurrency_control}}
 Content-Type: application/vnd.deltek.maconomy.containers+json
 Cookie: {{cookie_name}}={{cookie_value}}
 
-{"data": {"numberday2": 0.0}}
+{"data": {"numberday1": 1.0}}
 
 
 # @lang=lua
@@ -109,8 +115,6 @@ Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
 
 ###
 
-@job_name=<job name here>
-
 # Get job number from job name
 POST {{base_url}}/containers/{{company}}/timeregistration/search/table;foreignkey=notblockedjobnumber_jobheader
 Authorization: X-Cookie {{cookie_name}}
@@ -133,14 +137,12 @@ Content-type: application/vnd.deltek.maconomy.containers+json; version=5.0
 
 ###
 
-@job_number = <job number>
-
 # Get list of tasks
 POST {{base_url}}/containers/{{company}}/timeregistration/search/table;foreignkey=taskname_tasklistline
 Authorization: X-Cookie {{cookie_name}}
 Cookie: {{cookie_name}}={{cookie_value}}
 Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
-Content-type: application/vnd.deltek.maconomy.containers+json; version=5.0
+Content-type: application/vnd.deltek.maconomy.containers+json
 
 {
   "data": {
@@ -150,9 +152,6 @@ Content-type: application/vnd.deltek.maconomy.containers+json; version=5.0
 }
 
 ###
-
-@job_number=<job number>
-@task_name=<task name>
 
 # Set new job and task on last row
 POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/table/?row=end
@@ -213,6 +212,28 @@ Cookie: {{cookie_name}}={{cookie_value}}
 Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
 Maconomy-Concurrency-Control: {{concurrency_control}}
 Maconomy-Response-Type: patch
+Content-Length: 0
+
+# @lang=lua
+> {%
+  local function capture_header(variable_name, header_name)
+    local header_values = response.headers[header_name]
+    if header_values ~= nil then
+      client.global.set(variable_name, header_values[1])
+    end
+  end
+
+  capture_header('concurrency_control', 'maconomy-concurrency-control')
+%}
+
+###
+
+# Submit time timesheet
+POST {{base_url}}/containers/{{company}}/timeregistration/instances/{{container_instance_id}}/data/panes/card/0/action;name=submittimesheet
+Authorization: X-Cookie {{cookie_name}}
+Cookie: {{cookie_name}}={{cookie_value}}
+Maconomy-Concurrency-Control: {{concurrency_control}}
+Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
 Content-Length: 0
 
 # @lang=lua
