@@ -34,21 +34,21 @@ impl TimeSheetService<'_> {
         &mut self,
         job: &str,
         task: &str,
-        day: &Day,
+        days: &[Day],
     ) -> Result<(), SetTimeError> {
-        self.set_time(0.0, day, job, task).await
+        self.set_time(0.0, days, job, task).await
     }
 
     /// Sets time (initializes the week if it is uninitialized)
     pub(crate) async fn set_time(
         &mut self,
         hours: f32,
-        day: &Day,
+        days: &[Day],
         job: &str,
         task: &str,
     ) -> Result<(), SetTimeError> {
         let mut repository = self.repository.lock().await;
-        if let Err(err) = repository.set_time(hours, day, job, task).await {
+        if let Err(err) = repository.set_time(hours, days, job, task).await {
             return match err {
                 AddLineError::WeekUninitialized(AddRowError::Unknown(err)) => todo!("{}", err),
                 AddLineError::WeekUninitialized(AddRowError::WeekUninitialized) => {
@@ -57,7 +57,7 @@ impl TimeSheetService<'_> {
                     repository.create_new_timesheet().await?;
 
                     repository
-                        .set_time(hours, day, job, task)
+                        .set_time(hours, days, job, task)
                         .await
                         .map_err(|err| {
                             let msg = format!(

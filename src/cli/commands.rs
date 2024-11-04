@@ -73,8 +73,8 @@ impl<'a> CommandClient<'a> {
         }
     }
 
-    pub(crate) async fn set(&mut self, hours: f32, day: Option<Day>, job: &str, task: &str) {
-        let day = get_day(day);
+    pub(crate) async fn set(&mut self, hours: f32, days: Option<&[Day]>, job: &str, task: &str) {
+        let day = get_days(days);
         self.time_sheet_service
             .lock()
             .await
@@ -89,11 +89,11 @@ impl<'a> CommandClient<'a> {
             });
     }
 
-    pub(crate) async fn clear(&mut self, job: &str, task: &str, day: Option<Day>) {
+    pub(crate) async fn clear(&mut self, job: &str, task: &str, days: Option<&[Day]>) {
         self.time_sheet_service
             .lock()
             .await
-            .clear(job, task, &get_day(day))
+            .clear(job, task, &get_days(days))
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
@@ -137,15 +137,15 @@ impl<'a> CommandClient<'a> {
     }
 }
 
-fn get_day(day: Option<Day>) -> Day {
-    if let Some(day) = day {
-        day
+fn get_days(days: Option<&[Day]>) -> Vec<Day> {
+    if let Some(day) = days {
+        day.to_vec()
     } else {
         // Fall back to today's weekday
         let today = Local::now().date_naive().weekday().to_string();
         let today = today.parse().expect("Failed to parse today's weekday");
         info!("no day passed to 'set', using today's weekday '{today}'");
 
-        today
+        vec![today]
     }
 }

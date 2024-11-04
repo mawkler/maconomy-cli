@@ -188,11 +188,10 @@ impl MaconomyHttpClient<'_> {
         Ok((time_registration, concurrency_control.into()))
     }
 
-    // TODO: improve result type to include NotFound
     pub async fn set_time(
         &self,
         hours: f32,
-        day: u8,
+        days: &[u8],
         row: u8,
         container_instance: &ContainerInstance,
     ) -> Result<ConcurrencyControl> {
@@ -200,8 +199,7 @@ impl MaconomyHttpClient<'_> {
         let instance_url = self.get_container_instance_url(&container_instance.id.0);
         let url = format!("{instance_url}/data/panes/table/{row}");
 
-        let day = format!("numberday{day}");
-        let body = json!({"data": {day: hours}});
+        let body = set_days_body_from_days(hours, days);
         debug!("setting set_time body to {body}");
 
         let request = self
@@ -412,4 +410,17 @@ async fn is_uninitialized_week_error(response_body: &bytes::Bytes) -> Result<boo
         msg.as_str()
             .is_some_and(|msg| msg.starts_with("Maconomy system error: "))
     }))
+}
+
+fn set_days_body_from_days(hours: f32, days: &[u8]) -> serde_json::Value {
+    let days: serde_json::Map<_, _> = days
+        .iter()
+        .map(|&day| {
+            let key = format!("numberday{day}");
+            let value = serde_json::json!(hours);
+            (key, value)
+        })
+        .collect();
+
+    serde_json::json!({ "data": days })
 }

@@ -7,7 +7,8 @@ Maconomy command-line interface for interacting with time sheets.
 
 ## Features
 
-- Editing and viewing time sheet
+- Editing time sheet
+- Viewing time sheet, both as table and as JSON
 - Automatically instantiating new week if it hasn't been created yet
 - Automatically creating new lines if the job/task combination isn't in the time sheet
 

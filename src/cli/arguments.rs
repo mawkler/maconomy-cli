@@ -32,10 +32,10 @@ pub enum Command {
     /// Get the time sheet for the current week
     Get {
         /// Week number (NOT YET SUPPORTED)
-        #[arg(short, long)]
+        #[arg(long, short)]
         week: Option<u8>,
         /// Output format (defaults to "table")
-        #[arg(short, long)]
+        #[arg(long, short)]
         format: Option<Format>,
     },
 
@@ -46,33 +46,33 @@ pub enum Command {
         hours: f32,
 
         /// Name of the job
-        #[arg(short, long)]
+        #[arg(long, short)]
         job: String,
 
         /// Name of the task
-        #[arg(long)]
+        #[arg(long, short)]
         task: String,
 
-        /// Day of the week, for example "tuesday"
+        /// Day(s) of the week, for example "tuesday"
         ///
-        /// Will default to today if omitted
-        #[arg(short, long, value_parser = |s: &str| Day::from_str(s))]
-        day: Option<Day>,
+        /// Defaults to today if omitted
+        #[arg(long, short, num_args(0..), value_parser = |s: &str| Day::from_str(s))]
+        day: Option<Vec<Day>>,
     },
 
     /// Remove hours hours on some day for a given job and task
     Clear {
         /// Name of the job
-        #[arg(short, long)]
+        #[arg(long, short)]
         job: String,
 
         /// Name of the task
-        #[arg(long)]
+        #[arg(long, short)]
         task: String,
 
-        /// Day of the week, for example "tuesday"
-        #[arg(short, long)]
-        day: Option<Day>,
+        /// Day(s) of the week, for example "tuesday"
+        #[arg(long, short)]
+        day: Option<Vec<Day>>,
     },
 
     /// Submit time sheet for week

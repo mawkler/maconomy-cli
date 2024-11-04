@@ -64,6 +64,7 @@ impl AuthService {
         }
 
         debug!("Cookie file not found, attempting to reauthenticate");
+        eprintln!("User not logged in. Opening web browser...");
         self.reauthenticate()
             .await
             .context("Failed to reauthenticate")

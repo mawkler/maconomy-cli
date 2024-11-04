@@ -39,9 +39,9 @@ impl FromStr for Day {
     }
 }
 
-impl From<Day> for u8 {
-    fn from(value: Day) -> Self {
-        value as u8 + 1
+impl From<&Day> for u8 {
+    fn from(day: &Day) -> Self {
+        day.clone() as u8 + 1
     }
 }
 

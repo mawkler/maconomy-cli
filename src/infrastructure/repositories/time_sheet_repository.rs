@@ -128,7 +128,7 @@ impl TimeSheetRepository<'_> {
     pub(crate) async fn set_time(
         &mut self,
         hours: f32,
-        day: &Day,
+        days: &[Day],
         job: &str,
         task: &str,
     ) -> Result<(), AddLineError> {
@@ -145,13 +145,13 @@ impl TimeSheetRepository<'_> {
             .await
             .context("Failed to get container instance")?;
 
+        let days: Vec<_> = days.iter().map(u8::from).collect();
+
         let concurrency_control = self
             .client
-            .set_time(hours, day.clone().into(), line_number, &container_instance)
+            .set_time(hours, &days, line_number, &container_instance)
             .await
-            .with_context(|| {
-                format!("Failed to set {hours} hours on day {day}, row {line_number}")
-            })?;
+            .with_context(|| format!("Failed to set {hours} hours on row {line_number}"))?;
 
         // TODO: also update self.time_registration
         self.update_concurrency_control(concurrency_control);

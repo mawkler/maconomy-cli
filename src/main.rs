@@ -1,5 +1,5 @@
 use anyhow::Context;
-use cli::arguments::{parse_arguments, Command};
+use cli::arguments::{parse_arguments, Command, Line};
 use cli::commands::CommandClient;
 use config::Configuration;
 use domain::time_sheet_service::TimeSheetService;
@@ -51,15 +51,15 @@ async fn main() -> anyhow::Result<()> {
             day,
             job,
             task,
-        } => command_client.set(hours, day, &job, &task).await,
-        Command::Clear { job, task, day } => command_client.clear(&job, &task, day).await,
+        } => command_client.set(hours, day.as_deref(), &job, &task).await,
+        Command::Clear { job, task, day } => {
+            command_client.clear(&job, &task, day.as_deref()).await
+        }
         // TODO: haven't actually tested this yet (can only be tested once a week)
         Command::Submit => command_client.submit().await,
         Command::Logout => command_client.logout().await,
         Command::Line(line) => match line {
-            cli::arguments::Line::Delete { line_number } => {
-                command_client.delete(&line_number).await
-            }
+            Line::Delete { line_number } => command_client.delete(&line_number).await,
         },
     };
 
