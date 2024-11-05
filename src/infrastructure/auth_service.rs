@@ -6,7 +6,7 @@ use log::{debug, error, warn};
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::fmt::Display;
-use tokio::io::AsyncWriteExt;
+use tokio::{io::AsyncWriteExt, join};
 
 const COOKIE_NAME_PREFIX: &str = "Maconomy-";
 const TIMEOUT: tokio::time::Duration = tokio::time::Duration::from_secs(300);
@@ -79,15 +79,22 @@ impl AuthService {
     }
 
     pub(crate) async fn logout(&self) -> Result<()> {
-        if let Err(err) = tokio::fs::remove_file(&*self.get_cookie_path()?).await {
+        let cookie_path = &*self.get_cookie_path()?;
+
+        let (clear_cookies, remove_file) = join!(
+            self.clear_browser_cookies(),
+            tokio::fs::remove_file(cookie_path)
+        );
+
+        clear_cookies.context("Failed to clear browser cookies")?;
+
+        if let Err(err) = remove_file {
             if err.kind() != std::io::ErrorKind::NotFound {
                 bail!("Failed to remove auth cookie: {err}");
             }
         };
 
-        self.clear_browser_cookies()
-            .await
-            .context("Failed to clear browser cookies")
+        Ok(())
     }
 
     async fn open_browser_and_authenticate(&self) -> Result<Cookie> {
@@ -108,7 +115,9 @@ impl AuthService {
         let auth_cookie = wait_for_auth_cookie(&page).await?;
 
         browser.close().await.context("Failed to close browser")?;
-        let _ = handle.await;
+        handle
+            .await
+            .context("Something went wrong when awaiting browser poller")?;
 
         Ok(auth_cookie)
     }
