@@ -2,16 +2,15 @@ use anyhow::{bail, Context, Result};
 use chromiumoxide::cdp::browser_protocol::network::{ClearBrowserCookiesParams, Cookie};
 use chromiumoxide::page::Page;
 use futures::StreamExt;
-use log::{debug, error};
+use log::{debug, error, warn};
 use serde::Deserialize;
 use std::borrow::Cow;
-use std::io::{self, BufReader};
-use std::{fmt::Display, fs};
-use std::{fs::File, io::Write, time::Duration};
+use std::fmt::Display;
+use tokio::io::AsyncWriteExt;
 
 const COOKIE_NAME_PREFIX: &str = "Maconomy-";
-const TIMEOUT: Duration = Duration::from_secs(300);
-const POLL_INTERVAL: Duration = Duration::from_secs(1);
+const TIMEOUT: tokio::time::Duration = tokio::time::Duration::from_secs(300);
+const POLL_INTERVAL: tokio::time::Duration = tokio::time::Duration::from_secs(1);
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct AuthCookie {
@@ -74,14 +73,14 @@ impl AuthService {
             .await
             .context("Failed to authenticate user through web browser")?;
 
-        self.write_cookie_to_file(&cookie)?;
+        self.write_cookie_to_file(&cookie).await?;
 
         Ok(cookie.into())
     }
 
     pub(crate) async fn logout(&self) -> Result<()> {
-        if let Err(err) = fs::remove_file(&*self.get_cookie_path()?) {
-            if err.kind() != io::ErrorKind::NotFound {
+        if let Err(err) = tokio::fs::remove_file(&*self.get_cookie_path()?).await {
+            if err.kind() != std::io::ErrorKind::NotFound {
                 bail!("Failed to remove auth cookie: {err}");
             }
         };
@@ -96,7 +95,7 @@ impl AuthService {
         let handle = tokio::task::spawn(async move {
             while let Some(result) = handler.next().await {
                 if let Err(err) = result {
-                    error!("{err}");
+                    warn!("{err}");
                 }
             }
         });
@@ -160,28 +159,30 @@ impl AuthService {
         shellexpand::full(&self.cookie_path).context("Failed to expand cookie path")
     }
 
-    fn write_cookie_to_file(&self, cookie: &Cookie) -> Result<()> {
+    async fn write_cookie_to_file(&self, cookie: &Cookie) -> Result<()> {
         let cookie = serde_json::json!({
             "name": cookie.name,
             "value": cookie.value,
         })
         .to_string();
 
-        let mut file =
-            File::create(&*self.get_cookie_path()?).context("Failed to create cookie file")?;
+        let mut file = tokio::fs::File::create(&*self.get_cookie_path()?)
+            .await
+            .context("Failed to create cookie file")?;
         file.write_all(cookie.as_bytes())
+            .await
             .context("Failed to write cookie to file")?;
 
         Ok(())
     }
 
     fn read_cookie_from_file(&self) -> Result<Option<AuthCookie>> {
-        let file = match File::open(&*self.get_cookie_path()?) {
+        let file = match std::fs::File::open(&*self.get_cookie_path()?) {
             Ok(file) => file,
             Err(_) => return Ok(None),
         };
 
-        let reader = BufReader::new(file);
+        let reader = std::io::BufReader::new(file);
         let cookie: AuthCookie =
             serde_json::from_reader(reader).context("Failed to deserialize cookie from file")?;
 

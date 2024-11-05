@@ -30,7 +30,7 @@ chrono = "0.4.38"
 color-print = "0.3.6"
 uuid = { version = "1.11.0", features = [ "v4", "fast-rng", "macro-diagnostics" ] }
 shellexpand = "3.1.0"
-thiserror = "1.0.68"
+thiserror = "1.0.67"
 bytes = "1.8.0"
 
 [dev-dependencies]
