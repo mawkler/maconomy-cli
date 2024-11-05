@@ -92,16 +92,13 @@ impl AuthService {
     }
 
     async fn open_browser_and_authenticate(&self) -> Result<Cookie> {
-        let (mut browser, mut handler) = Self::launch_browser(false).await?;
+        let (mut browser, mut handler) = Self::launch_browser(true).await?;
         let handle = tokio::task::spawn(async move {
             while let Some(result) = handler.next().await {
                 if let Err(err) = result {
-                    let err = format!("Error occurred while waiting for user to sign in: {err}");
                     error!("{err}");
-                    bail!("{err}");
                 }
             }
-            Ok(())
         });
 
         let page = browser
