@@ -1,14 +1,12 @@
 use anyhow::{bail, Context, Result};
-use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::network::{ClearBrowserCookiesParams, Cookie};
 use chromiumoxide::page::Page;
 use futures::StreamExt;
-use log::{debug, error, info};
+use log::{debug, error};
 use serde::Deserialize;
 use std::borrow::Cow;
-use std::fmt::Display;
-use std::fs;
 use std::io::{self, BufReader};
+use std::{fmt::Display, fs};
 use std::{fs::File, io::Write, time::Duration};
 
 const COOKIE_NAME_PREFIX: &str = "Maconomy-";
@@ -53,13 +51,13 @@ impl AuthService {
 
     pub(crate) async fn authenticate(&self) -> Result<AuthCookie> {
         if let Some(cookie) = &self.auth_cookie {
-            info!("Found service cookie in memory");
+            debug!("Found auth cookie in memory");
             return Ok(cookie.clone());
         }
 
         debug!("Cookie not found in memory, attempting to read in from file");
         if let Some(cookie) = self.read_cookie_from_file()? {
-            debug!("Found cookie in file");
+            debug!("Found auth cookie in file");
             return Ok(cookie.clone());
         }
 
@@ -94,13 +92,16 @@ impl AuthService {
     }
 
     async fn open_browser_and_authenticate(&self) -> Result<Cookie> {
-        let (mut browser, mut handler) = Self::launch_browser(true).await?;
+        let (mut browser, mut handler) = Self::launch_browser(false).await?;
         let handle = tokio::task::spawn(async move {
-            while let Some(h) = handler.next().await {
-                if h.is_err() {
-                    break;
+            while let Some(result) = handler.next().await {
+                if let Err(err) = result {
+                    let err = format!("Error occurred while waiting for user to sign in: {err}");
+                    error!("{err}");
+                    bail!("{err}");
                 }
             }
+            Ok(())
         });
 
         let page = browser
@@ -119,7 +120,7 @@ impl AuthService {
     async fn launch_browser(
         with_head: bool,
     ) -> Result<(chromiumoxide::Browser, chromiumoxide::Handler)> {
-        let mut builder = BrowserConfig::builder();
+        let mut builder = chromiumoxide::BrowserConfig::builder();
         if with_head {
             debug!("Configuring browser with head");
             builder = builder.with_head();
@@ -131,11 +132,14 @@ impl AuthService {
             Ok(config) => config,
             Err(err) => {
                 error!("Failed to create browser config: {err}");
-                panic!("Failed to create browser config. Please make sure that you have either Chromium or Google Chrome installed")
+                panic!(
+                    "Failed to create browser config. Please make sure that you have either \
+                    Chromium or Google Chrome installed"
+                );
             }
         };
 
-        Browser::launch(browser_config)
+        chromiumoxide::Browser::launch(browser_config)
             .await
             .context("Failed to launch browser")
     }
@@ -188,16 +192,17 @@ impl AuthService {
     }
 }
 
-// TODO: change Result to a cleaner type that is NotFound or Other
-async fn get_maconomy_cookie(page: &Page) -> Option<Cookie> {
-    page.get_cookies()
+async fn get_maconomy_cookie(page: &Page) -> Result<Option<Cookie>> {
+    let cookies = page
+        .get_cookies()
         .await
-        .ok()?
+        .context("failed to get cookies")?
         .into_iter()
         // Could there be more than one maconomy cookie?
         // TODO: fetch the name of the cookie from the Maconomy-Cookie header, and use that to make
         // sure that we get the right cookie
-        .find(|c| c.name.starts_with(COOKIE_NAME_PREFIX))
+        .find(|c| c.name.starts_with(COOKIE_NAME_PREFIX));
+    Ok(cookies)
 }
 
 async fn wait_for_auth_cookie(page: &Page) -> Result<Cookie> {
@@ -208,8 +213,7 @@ async fn wait_for_auth_cookie(page: &Page) -> Result<Cookie> {
             bail!("Timed out waiting for user to sign in");
         }
 
-        let cookies = get_maconomy_cookie(page).await;
-        if let Some(cookie) = cookies {
+        if let Some(cookie) = get_maconomy_cookie(page).await? {
             return Ok(cookie);
         }
 
