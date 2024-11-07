@@ -22,14 +22,10 @@ enum ParseRangeError<'a> {
     #[error("Invalid day '{0}'")]
     Day(&'a str),
     #[error("Invalid range")]
-    Range(#[from] InvalidRange),
+    Range(Day, Day),
     #[error("Invalid input")]
     Input,
 }
-
-#[derive(thiserror::Error, Debug)]
-#[error("Invalid range")]
-struct InvalidRange(Day, Day);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Day {
@@ -56,13 +52,13 @@ impl Day {
         ))(input)
     }
 
-    fn range(start: &Day, end: &Day) -> Result<Vec<Day>, InvalidRange> {
+    fn range(start: &Day, end: &Day) -> Option<Vec<Day>> {
         let (start_int, end_int): (u8, u8) = (start.into(), end.into());
 
         if start_int < end_int {
-            Ok((start_int..=end_int).map(Day::from).collect())
+            Some((start_int..=end_int).map(Day::from).collect())
         } else {
-            Err(InvalidRange(start.clone(), end.clone()))
+            None
         }
     }
 }
@@ -70,9 +66,7 @@ impl Day {
 fn parse_day_range(input: &str) -> Result<Vec<Day>, ParseRangeError> {
     let mut range_parser = separated_pair(Day::parse, tag("-"), Day::parse);
     match range_parser(input) {
-        Ok((_, (start, end))) => {
-            Day::range(&start, &end).or(Err(ParseRangeError::from(InvalidRange(start, end))))
-        }
+        Ok((_, (start, end))) => Day::range(&start, &end).ok_or(ParseRangeError::Range(start, end)),
         Err(_) => Err(ParseRangeError::Input),
     }
 }
@@ -166,6 +160,9 @@ mod tests {
         let range = "tue-mon";
         let result = parse_day_range(range);
 
-        assert!(matches!(InvalidRange, result));
+        assert!(matches!(
+            ParseRangeError::Range(Day::Tuesday, Day::Monday),
+            result
+        ));
     }
 }
