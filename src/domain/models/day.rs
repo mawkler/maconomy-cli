@@ -1,31 +1,15 @@
+use anyhow::{anyhow, Context};
 use nom::{
     branch::alt,
-    bytes::complete::{tag, tag_no_case, take_while1},
-    combinator::map,
-    error::Error as NomError,
+    bytes::complete::{tag, tag_no_case, take_while_m_n},
+    combinator::{map, map_res},
+    multi::separated_list0,
     sequence::separated_pair,
-    IResult,
+    Finish, IResult,
 };
 use std::{fmt::Display, str::FromStr};
 
-#[derive(Debug)]
-struct Range(Day, Day);
-
-impl Display for Range {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-{}", self.0, self.1)
-    }
-}
-
-#[derive(thiserror::Error, Debug)]
-enum ParseRangeError<'a> {
-    #[error("Invalid day '{0}'")]
-    Day(&'a str),
-    #[error("Invalid range")]
-    Range(Day, Day),
-    #[error("Invalid input")]
-    Input,
-}
+type Range = (Day, Day);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Day {
@@ -40,6 +24,7 @@ pub(crate) enum Day {
 
 impl Day {
     // TODO: move to `impl Range` instead
+    // Or perhaps move it to its own module in `cli`
     fn parse(input: &str) -> IResult<&str, Day> {
         alt((
             map(tag_no_case("mon"), |_| Day::Monday),
@@ -63,12 +48,74 @@ impl Day {
     }
 }
 
-fn parse_day_range(input: &str) -> Result<Vec<Day>, ParseRangeError> {
-    let mut range_parser = separated_pair(Day::parse, tag("-"), Day::parse);
-    match range_parser(input) {
-        Ok((_, (start, end))) => Day::range(&start, &end).ok_or(ParseRangeError::Range(start, end)),
-        Err(_) => Err(ParseRangeError::Input),
+fn day_prefix(input: &str) -> IResult<&str, Day> {
+    map_res(take_while_m_n(2, 9, char::is_alphabetic), |prefix: &str| {
+        let week = [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        ];
+
+        week.iter()
+            .find(|&day| day.starts_with(prefix))
+            .map(|&d| {
+                let (_, day) = Day::parse(d).expect("Day validity has already been checked");
+                day
+            })
+            .ok_or("No matching day")
+    })(input)
+}
+
+enum Item {
+    Day(Day),
+    Range(Range),
+}
+
+impl From<Day> for Item {
+    fn from(day: Day) -> Self {
+        Item::Day(day)
     }
+}
+
+impl From<Range> for Item {
+    fn from(range: Range) -> Self {
+        Item::Range(range)
+    }
+}
+
+fn day_range(input: &str) -> IResult<&str, Range> {
+    separated_pair(day_prefix, tag("-"), day_prefix)(input)
+}
+
+fn parse_items(input: &str) -> IResult<&str, Vec<Item>> {
+    let day = map(day_prefix, Item::from);
+    let range = map(day_range, Item::from);
+    separated_list0(tag(" "), alt((range, day)))(input)
+}
+
+fn parse_days(input: &str) -> anyhow::Result<Vec<Day>> {
+    let (_, items) = parse_items(input)
+        // because of borrow checker limitations for nom together with anyhow
+        .map_err(|err| err.to_owned())
+        .finish()
+        .context("Failed to parse days")?;
+
+    let items: Vec<_> = items
+        .into_iter()
+        .map(|item| match item {
+            Item::Range((start, end)) => Day::range(&start, &end).ok_or(anyhow!("Invalid range")),
+            Item::Day(day) => Ok(vec![day]),
+        })
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .flatten()
+        .collect();
+
+    Ok(items)
 }
 
 impl FromStr for Day {
@@ -149,20 +196,18 @@ mod tests {
     #[test]
     fn range_test() {
         let range = "mon-thu";
-        let result = parse_day_range(range).unwrap();
+        let (_, range) = day_range(range).unwrap();
 
-        let expected = [Day::Monday, Day::Tuesday, Day::Wednesday, Day::Thursday];
-        assert_eq!(result, expected);
+        let expected = (Day::Monday, Day::Thursday);
+        assert_eq!(range, expected);
     }
 
     #[test]
     fn invalid_range_test() {
         let range = "tue-mon";
-        let result = parse_day_range(range);
+        let (_, result) = day_range(range).unwrap();
 
-        assert!(matches!(
-            ParseRangeError::Range(Day::Tuesday, Day::Monday),
-            result
-        ));
+        let expected = (Day::Tuesday, Day::Monday);
+        assert_eq!(result, expected);
     }
 }
