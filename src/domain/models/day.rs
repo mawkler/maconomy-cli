@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, fmt::Display, str::FromStr};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum Day {
     // TODO: try setting Monday = 1, etc.
     Monday,

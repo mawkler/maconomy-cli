@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::domain::models::day::Day;
 use anyhow::{anyhow, Context};
 use nom::{
@@ -71,25 +73,25 @@ fn days_in_range((start, end): &Range) -> Option<Vec<Day>> {
     }
 }
 
-pub(crate) fn parse_days(input: &str) -> anyhow::Result<Vec<Day>> {
+pub(crate) fn parse_days_of_week(input: &str) -> anyhow::Result<HashSet<Day>> {
     let (_, items) = parse_items(input)
         // Because of borrow checker limitations for nom together with anyhow
         .map_err(|err| err.to_owned())
         .finish()
         .context("Failed to parse days")?;
 
-    let items: Vec<_> = items
+    let days = items
         .into_iter()
         .map(|item| match item {
             Item::Range(range) => days_in_range(&range).ok_or(anyhow!("Invalid range")),
             Item::Day(day) => Ok(vec![day]),
         })
-        .collect::<Result<Vec<_>, _>>()?
+        .collect::<Result<Vec<Vec<_>>, _>>()?
         .into_iter()
         .flatten()
         .collect();
 
-    Ok(items)
+    Ok(days)
 }
 
 #[cfg(test)]
@@ -133,15 +135,15 @@ mod tests {
 
     #[test]
     fn individual_days_test() {
-        let days = parse_days("mon, thu").unwrap();
+        let days = parse_days_of_week("mon, thu").unwrap();
 
         let expected = [Day::Monday, Day::Thursday];
-        assert_eq!(days, expected);
+        assert_eq!(days, HashSet::from(expected));
     }
 
     #[test]
     fn days_and_range_test() {
-        let days = parse_days("mon, wed, fri-sun").unwrap();
+        let days = parse_days_of_week("mon, wed, fri-sun").unwrap();
 
         let expected = [
             Day::Monday,
@@ -150,6 +152,6 @@ mod tests {
             Day::Saturday,
             Day::Sunday,
         ];
-        assert_eq!(days, expected);
+        assert_eq!(days, HashSet::from(expected));
     }
 }
