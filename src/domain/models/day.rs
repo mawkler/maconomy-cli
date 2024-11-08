@@ -2,6 +2,7 @@ use std::{borrow::Borrow, fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Day {
+    // TODO: try setting Monday = 1, etc.
     Monday,
     Tuesday,
     Wednesday,
@@ -47,6 +48,20 @@ impl From<u8> for Day {
             Day::Sunday,
         ];
         week.get(day as usize - 1).expect("Invalid day").clone()
+    }
+}
+
+impl From<chrono::Weekday> for Day {
+    fn from(day: chrono::Weekday) -> Self {
+        match day {
+            chrono::Weekday::Mon => Self::Monday,
+            chrono::Weekday::Tue => Self::Tuesday,
+            chrono::Weekday::Wed => Self::Wednesday,
+            chrono::Weekday::Thu => Self::Thursday,
+            chrono::Weekday::Fri => Self::Friday,
+            chrono::Weekday::Sat => Self::Saturday,
+            chrono::Weekday::Sun => Self::Sunday,
+        }
     }
 }
 

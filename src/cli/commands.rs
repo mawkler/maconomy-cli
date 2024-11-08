@@ -11,7 +11,6 @@ use crate::{
 };
 use anyhow::Context;
 use chrono::{Datelike, Local};
-use log::info;
 use std::rc::Rc;
 use tokio::sync::Mutex;
 
@@ -143,10 +142,7 @@ fn get_days(days: Option<&[Day]>) -> Vec<Day> {
         day.to_vec()
     } else {
         // Fall back to today's weekday
-        let today = Local::now().date_naive().weekday().to_string();
-        let today = today.parse().expect("Failed to parse today's weekday");
-        info!("no day passed to 'set', using today's weekday '{today}'");
-
+        let today = Local::now().date_naive().weekday().into();
         vec![today]
     }
 }

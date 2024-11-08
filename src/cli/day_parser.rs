@@ -3,9 +3,10 @@ use anyhow::{anyhow, Context};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while_m_n},
+    character::complete::{alphanumeric1, char, multispace0, space0, space1},
     combinator::{map, map_res},
     multi::separated_list0,
-    sequence::separated_pair,
+    sequence::{delimited, separated_pair},
     Finish, IResult,
 };
 
@@ -54,7 +55,10 @@ fn day_range(input: &str) -> IResult<&str, Range> {
 fn parse_items(input: &str) -> IResult<&str, Vec<Item>> {
     let day = map(day_prefix, Item::from);
     let range = map(day_range, Item::from);
-    separated_list0(tag(" "), alt((range, day)))(input)
+    let comma = delimited(space0, tag(","), space0);
+    let separator = alt((comma, space1));
+
+    separated_list0(separator, alt((range, day)))(input)
 }
 
 fn days_in_range((start, end): &Range) -> Option<Vec<Day>> {
@@ -125,5 +129,27 @@ mod tests {
         let result = days_in_range(&range);
 
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn individual_days_test() {
+        let days = parse_days("mon, thu").unwrap();
+
+        let expected = [Day::Monday, Day::Thursday];
+        assert_eq!(days, expected);
+    }
+
+    #[test]
+    fn days_and_range_test() {
+        let days = parse_days("mon, wed, fri-sun").unwrap();
+
+        let expected = [
+            Day::Monday,
+            Day::Wednesday,
+            Day::Friday,
+            Day::Saturday,
+            Day::Sunday,
+        ];
+        assert_eq!(days, expected);
     }
 }

@@ -95,7 +95,16 @@ async fn test_set_hours() {
 
     // When
     let output = run(
-        ["set", "--job", "job one", "--task", "some task one", "8"],
+        [
+            "set",
+            "8",
+            "--job",
+            "job one",
+            "--task",
+            "some task one",
+            "--day",
+            "monday",
+        ],
         &mock_server.uri(),
     );
 
