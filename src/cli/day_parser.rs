@@ -39,7 +39,7 @@ pub(crate) fn parse_days_of_week(input: &str) -> anyhow::Result<Days> {
     let days = items
         .into_iter()
         .map(|item| match item {
-            Item::Range(range) => days_in_range(&range).ok_or(anyhow!("Invalid range")),
+            Item::Range(range) => days_in_range(range).ok_or(anyhow!("Invalid range")),
             Item::Day(day) => Ok(vec![day]),
         })
         .collect::<Result<Vec<Vec<_>>, _>>()?
@@ -83,11 +83,11 @@ fn parse_items(input: &str) -> IResult<&str, Vec<Item>> {
     separated_list0(separator, alt((range, day)))(input)
 }
 
-fn days_in_range((start, end): &Range) -> Option<Vec<Day>> {
-    let (start_int, end_int): (u8, u8) = (start.into(), end.into());
+fn days_in_range((start, end): Range) -> Option<Vec<Day>> {
+    let (start, end) = (start as u8, end as u8);
 
-    if start_int < end_int {
-        Some((start_int..=end_int).map(Day::from).collect())
+    if start < end {
+        Some((start..=end).map(Day::from).collect())
     } else {
         None
     }
@@ -197,7 +197,7 @@ mod tests {
     #[test]
     fn days_in_range_test() {
         let range = (Day::Tuesday, Day::Friday);
-        let result = days_in_range(&range).unwrap();
+        let result = days_in_range(range).unwrap();
         let expected = [Day::Tuesday, Day::Wednesday, Day::Thursday, Day::Friday];
 
         assert_eq!(result, expected);
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn days_in_invalid_range_test() {
         let range = (Day::Tuesday, Day::Monday);
-        let result = days_in_range(&range);
+        let result = days_in_range(range);
 
         assert!(result.is_none());
     }

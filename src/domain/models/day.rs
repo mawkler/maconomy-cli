@@ -2,14 +2,13 @@ use std::{borrow::Borrow, collections::HashSet, fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum Day {
-    // TODO: try setting Monday = 1, etc.
-    Monday,
-    Tuesday,
-    Wednesday,
-    Thursday,
-    Friday,
-    Saturday,
-    Sunday,
+    Monday = 1,
+    Tuesday = 2,
+    Wednesday = 3,
+    Thursday = 4,
+    Friday = 5,
+    Saturday = 6,
+    Sunday = 7,
 }
 
 pub(crate) type Days = HashSet<Day>;
@@ -29,12 +28,6 @@ impl FromStr for Day {
             _ => anyhow::bail!("Unrecognized day {s}"),
         };
         Ok(day)
-    }
-}
-
-impl From<&Day> for u8 {
-    fn from(day: &Day) -> Self {
-        day.clone() as u8 + 1
     }
 }
 
