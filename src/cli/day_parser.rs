@@ -1,16 +1,15 @@
-use std::collections::HashSet;
-
 use crate::domain::models::day::Day;
 use anyhow::{anyhow, Context};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while_m_n},
-    character::complete::{alphanumeric1, char, multispace0, space0, space1},
+    character::complete::{space0, space1},
     combinator::{map, map_res},
     multi::separated_list0,
     sequence::{delimited, separated_pair},
     Finish, IResult,
 };
+use std::collections::HashSet;
 
 type Range = (Day, Day);
 
@@ -153,5 +152,62 @@ mod tests {
             Day::Sunday,
         ];
         assert_eq!(days, HashSet::from(expected));
+    }
+
+    #[test]
+    fn overlapping_day_ranges_test() {
+        let days = parse_days_of_week("mon, mon-wed").unwrap();
+
+        let expected = [Day::Monday, Day::Tuesday, Day::Wednesday];
+        assert_eq!(days, HashSet::from(expected));
+    }
+
+    #[test]
+    fn empty_range_test() {
+        let days = parse_days_of_week("").unwrap();
+
+        assert_eq!(days, HashSet::from([]));
+    }
+
+    #[test]
+    fn input_with_no_days_test() {
+        let days = parse_days_of_week("foo:bar").unwrap();
+
+        assert_eq!(days, HashSet::from([]));
+    }
+
+    #[test]
+    fn invalid_range_test() {
+        let err: String = parse_days_of_week("tue-mon").unwrap_err().to_string();
+
+        assert_eq!(err, "Invalid range");
+    }
+
+    #[test]
+    fn partial_day_names_test() {
+        // Ensures that "mo", "mon", "mond", etc. all map to `Day::Monday`
+        let days = [
+            ("monday", Day::Monday),
+            ("tuesday", Day::Tuesday),
+            ("wednesday", Day::Wednesday),
+            ("thursday", Day::Thursday),
+            ("friday", Day::Friday),
+            ("saturday", Day::Saturday),
+            ("sunday", Day::Sunday),
+        ];
+
+        for n in 2..=9 {
+            days.clone()
+                .into_iter()
+                .map(move |(input_day, expected_day)| {
+                    let input_day: String = input_day.chars().take(n).collect();
+                    (input_day, expected_day)
+                })
+                .for_each(|(input_day, expected_day)| {
+                    let days = parse_days_of_week(&input_day).unwrap();
+
+                    assert_eq!(days, HashSet::from([expected_day]));
+                })
+        }
     }
 }
