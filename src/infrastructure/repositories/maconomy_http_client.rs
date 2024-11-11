@@ -122,7 +122,6 @@ impl MaconomyHttpClient<'_> {
         })
     }
 
-    // TODO: this function hasn't actually been tested
     pub(crate) async fn create_timesheet(
         &self,
         container_instance: &ContainerInstance,
@@ -136,8 +135,7 @@ impl MaconomyHttpClient<'_> {
             .post(url)
             .header(ACCEPT, MACONOMY_JSON_V5)
             .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
-            .header(CONTENT_LENGTH, 0)
-            .header("Maconomy-Response-Type", "patch"); // TODO: this header value is probably not needed
+            .header(CONTENT_LENGTH, 0);
 
         let response = self.send_request(request).await?;
 
