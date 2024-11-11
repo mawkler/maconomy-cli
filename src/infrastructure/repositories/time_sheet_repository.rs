@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::maconomy_http_client::{
     self, ConcurrencyControl, ContainerInstance, MaconomyHttpClient,
 };
@@ -145,7 +147,7 @@ impl TimeSheetRepository<'_> {
             .await
             .context("Failed to get container instance")?;
 
-        let days: Vec<_> = days.iter().map(u8::from).collect();
+        let days: HashSet<_> = days.iter().map(|&d| d as u8).collect();
 
         let concurrency_control = self
             .client

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info};
 use reqwest::{
@@ -189,7 +191,7 @@ impl MaconomyHttpClient<'_> {
     pub async fn set_time(
         &self,
         hours: f32,
-        days: &[u8],
+        days: &HashSet<u8>,
         row: u8,
         container_instance: &ContainerInstance,
     ) -> Result<ConcurrencyControl> {
@@ -410,7 +412,7 @@ async fn is_uninitialized_week_error(response_body: &bytes::Bytes) -> Result<boo
     }))
 }
 
-fn set_days_body_from_days(hours: f32, days: &[u8]) -> serde_json::Value {
+fn set_days_body_from_days(hours: f32, days: &HashSet<u8>) -> serde_json::Value {
     let days: serde_json::Map<_, _> = days
         .iter()
         .map(|&day| {

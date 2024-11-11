@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, collections::HashSet, fmt::Display, str::FromStr};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum Day {
     Monday = 1,
     Tuesday = 2,
@@ -42,7 +42,7 @@ impl From<u8> for Day {
             Day::Saturday,
             Day::Sunday,
         ];
-        week.get(day as usize - 1).expect("Invalid day").clone()
+        *week.get(day as usize - 1).expect("Invalid day")
     }
 }
 

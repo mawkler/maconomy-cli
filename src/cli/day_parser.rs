@@ -180,8 +180,7 @@ mod tests {
         ];
 
         for n in 2..=9 {
-            days.clone()
-                .into_iter()
+            days.into_iter()
                 .map(move |(input_day, expected_day)| {
                     let input_day: String = input_day.chars().take(n).collect();
                     (input_day, expected_day)
