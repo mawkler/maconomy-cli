@@ -30,6 +30,27 @@ impl From<Range> for Item {
     }
 }
 
+pub(crate) fn parse_days_of_week(input: &str) -> anyhow::Result<HashSet<Day>> {
+    let (_, items) = parse_items(input)
+        // Because of borrow checker limitations for nom together with anyhow
+        .map_err(|err| err.to_owned())
+        .finish()
+        .context("Failed to parse days")?;
+
+    let days = items
+        .into_iter()
+        .map(|item| match item {
+            Item::Range(range) => days_in_range(&range).ok_or(anyhow!("Invalid range")),
+            Item::Day(day) => Ok(vec![day]),
+        })
+        .collect::<Result<Vec<Vec<_>>, _>>()?
+        .into_iter()
+        .flatten()
+        .collect();
+
+    Ok(days)
+}
+
 fn day_prefix(input: &str) -> IResult<&str, Day> {
     map_res(take_while_m_n(2, 9, char::is_alphabetic), |prefix: &str| {
         let week = [
@@ -50,7 +71,8 @@ fn day_prefix(input: &str) -> IResult<&str, Day> {
 }
 
 fn day_range(input: &str) -> IResult<&str, Range> {
-    separated_pair(day_prefix, tag("-"), day_prefix)(input)
+    let hyphen = delimited(space0, tag("-"), space0);
+    separated_pair(day_prefix, hyphen, day_prefix)(input)
 }
 
 fn parse_items(input: &str) -> IResult<&str, Vec<Item>> {
@@ -70,27 +92,6 @@ fn days_in_range((start, end): &Range) -> Option<Vec<Day>> {
     } else {
         None
     }
-}
-
-pub(crate) fn parse_days_of_week(input: &str) -> anyhow::Result<HashSet<Day>> {
-    let (_, items) = parse_items(input)
-        // Because of borrow checker limitations for nom together with anyhow
-        .map_err(|err| err.to_owned())
-        .finish()
-        .context("Failed to parse days")?;
-
-    let days = items
-        .into_iter()
-        .map(|item| match item {
-            Item::Range(range) => days_in_range(&range).ok_or(anyhow!("Invalid range")),
-            Item::Day(day) => Ok(vec![day]),
-        })
-        .collect::<Result<Vec<Vec<_>>, _>>()?
-        .into_iter()
-        .flatten()
-        .collect();
-
-    Ok(days)
 }
 
 #[cfg(test)]
@@ -113,23 +114,6 @@ mod tests {
 
         let expected = (Day::Tuesday, Day::Monday);
         assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn days_in_range_test() {
-        let range = (Day::Tuesday, Day::Friday);
-        let result = days_in_range(&range).unwrap();
-        let expected = [Day::Tuesday, Day::Wednesday, Day::Thursday, Day::Friday];
-
-        assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn days_in_invalid_range_test() {
-        let range = (Day::Tuesday, Day::Monday);
-        let result = days_in_range(&range);
-
-        assert!(result.is_none());
     }
 
     #[test]
@@ -209,5 +193,22 @@ mod tests {
                     assert_eq!(days, HashSet::from([expected_day]));
                 })
         }
+    }
+
+    #[test]
+    fn days_in_range_test() {
+        let range = (Day::Tuesday, Day::Friday);
+        let result = days_in_range(&range).unwrap();
+        let expected = [Day::Tuesday, Day::Wednesday, Day::Thursday, Day::Friday];
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn days_in_invalid_range_test() {
+        let range = (Day::Tuesday, Day::Monday);
+        let result = days_in_range(&range);
+
+        assert!(result.is_none());
     }
 }
