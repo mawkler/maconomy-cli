@@ -1,4 +1,3 @@
-use crate::domain::models::day::Day;
 use crate::infrastructure::repositories::maconomy_http_client::AddRowError;
 use crate::infrastructure::repositories::time_sheet_repository::{
     AddLineError, TimeSheetRepository,
@@ -7,6 +6,8 @@ use anyhow::Result;
 use log::warn;
 use std::rc::Rc;
 use tokio::sync::Mutex;
+
+use super::models::day::Days;
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum SetTimeError {
@@ -34,7 +35,7 @@ impl TimeSheetService<'_> {
         &mut self,
         job: &str,
         task: &str,
-        days: &[Day],
+        days: &Days,
     ) -> Result<(), SetTimeError> {
         self.set_time(0.0, days, job, task).await
     }
@@ -43,7 +44,7 @@ impl TimeSheetService<'_> {
     pub(crate) async fn set_time(
         &mut self,
         hours: f32,
-        days: &[Day],
+        days: &Days,
         job: &str,
         task: &str,
     ) -> Result<(), SetTimeError> {

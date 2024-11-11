@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt::Display, str::FromStr};
+use std::{borrow::Borrow, collections::HashSet, fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum Day {
@@ -11,6 +11,8 @@ pub(crate) enum Day {
     Saturday,
     Sunday,
 }
+
+pub(crate) type Days = HashSet<Day>;
 
 impl FromStr for Day {
     type Err = anyhow::Error;

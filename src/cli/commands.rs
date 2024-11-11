@@ -1,9 +1,8 @@
 use super::arguments::Format;
+use crate::domain::models::day::Days;
+use crate::domain::models::line_number::LineNumber;
 use crate::{
-    domain::{
-        models::{day::Day, line_number::LineNumber},
-        time_sheet_service::{SetTimeError, TimeSheetService},
-    },
+    domain::time_sheet_service::{SetTimeError, TimeSheetService},
     infrastructure::{
         auth_service::AuthService, repositories::time_sheet_repository::TimeSheetRepository,
     },
@@ -11,6 +10,7 @@ use crate::{
 };
 use anyhow::Context;
 use chrono::{Datelike, Local};
+use std::collections::HashSet;
 use std::rc::Rc;
 use tokio::sync::Mutex;
 
@@ -76,7 +76,11 @@ impl<'a> CommandClient<'a> {
         })
     }
 
-    pub(crate) async fn set(&mut self, hours: f32, days: Option<&[Day]>, job: &str, task: &str) {
+    pub(crate) async fn set(&mut self, hours: f32, days: Option<Days>, job: &str, task: &str) {
+        if days.as_ref().is_some_and(|days| days.is_empty()) {
+            exit_with_error!("`--day` is set but no day was provided");
+        }
+
         let day = get_days(days);
         self.time_sheet_service
             .lock()
@@ -92,7 +96,11 @@ impl<'a> CommandClient<'a> {
             });
     }
 
-    pub(crate) async fn clear(&mut self, job: &str, task: &str, days: Option<&[Day]>) {
+    pub(crate) async fn clear(&mut self, job: &str, task: &str, days: Option<Days>) {
+        if days.as_ref().is_some_and(|days| days.is_empty()) {
+            exit_with_error!("`--day` is set but no day was provided");
+        }
+
         self.time_sheet_service
             .lock()
             .await
@@ -137,12 +145,10 @@ impl<'a> CommandClient<'a> {
     }
 }
 
-fn get_days(days: Option<&[Day]>) -> Vec<Day> {
-    if let Some(day) = days {
-        day.to_vec()
-    } else {
+fn get_days(days: Option<Days>) -> Days {
+    days.unwrap_or_else(|| {
         // Fall back to today's weekday
         let today = Local::now().date_naive().weekday().into();
-        vec![today]
-    }
+        HashSet::from([today])
+    })
 }

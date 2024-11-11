@@ -1,7 +1,9 @@
-use crate::domain::models::{day::Day, line_number::LineNumber};
+use crate::domain::models::{day::Days, line_number::LineNumber};
 use clap::{Parser, Subcommand};
 use color_print::cformat;
 use std::str::FromStr;
+
+use super::day_parser::parse_days_of_week;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Format {
@@ -56,8 +58,13 @@ pub enum Command {
         /// Day(s) of the week, for example "tuesday"
         ///
         /// Defaults to today if omitted
-        #[arg(long, short, num_args(0..), value_parser = |s: &str| Day::from_str(s))]
-        day: Option<Vec<Day>>,
+        ///
+        /// You can also specify multiple days, and/or a range of days, for example
+        /// "monday-tuesday, friday"
+        ///
+        /// Also accepts short day names like "mon", "tue", etc.
+        #[arg(long, short, value_parser = parse_days_of_week)]
+        day: Option<Days>,
     },
 
     /// Remove hours hours on some day for a given job and task
@@ -71,8 +78,15 @@ pub enum Command {
         task: String,
 
         /// Day(s) of the week, for example "tuesday"
-        #[arg(long, short)]
-        day: Option<Vec<Day>>,
+        ///
+        /// Defaults to today if omitted
+        ///
+        /// You can also specify multiple days, and/or a range of days, for example
+        /// "monday-tuesday, friday"
+        ///
+        /// Also accepts short day names like "mon", "tue", etc.
+        #[arg(long, short, value_parser = parse_days_of_week)]
+        day: Option<Days>,
     },
 
     /// Submit time sheet for week
@@ -95,6 +109,7 @@ pub enum Command {
     after_help = cformat!("<bold,underline>Examples:</bold,underline>\
     \n  maconomy get \
     \n  maconomy set --job '<<job name>>' --task '<<task name>>' --day tuesday 8 \
+    \n  maconomy set --job '<<job name>>' --task '<<task name>>' --day 'mon-wed, fri' 8 \
     \n  maconomy clear --job '<<job name>>' --task '<<task name>>' \
     \n\
     \n<bold,underline>NOTE:</bold,underline> currently you can only interact with the current week. In the future you'll be able to specify any week.

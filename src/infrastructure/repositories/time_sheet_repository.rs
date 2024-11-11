@@ -3,7 +3,7 @@ use super::maconomy_http_client::{
 };
 use crate::{
     domain::models::{
-        day::Day,
+        day::Days,
         line_number::LineNumber,
         time_sheet::{Line, TimeSheet, Week},
     },
@@ -128,7 +128,7 @@ impl TimeSheetRepository<'_> {
     pub(crate) async fn set_time(
         &mut self,
         hours: f32,
-        days: &[Day],
+        days: &Days,
         job: &str,
         task: &str,
     ) -> Result<(), AddLineError> {

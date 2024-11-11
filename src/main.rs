@@ -51,10 +51,8 @@ async fn main() -> anyhow::Result<()> {
             day,
             job,
             task,
-        } => command_client.set(hours, day.as_deref(), &job, &task).await,
-        Command::Clear { job, task, day } => {
-            command_client.clear(&job, &task, day.as_deref()).await
-        }
+        } => command_client.set(hours, day, &job, &task).await,
+        Command::Clear { job, task, day } => command_client.clear(&job, &task, day).await,
         // TODO: haven't actually tested this yet (can only be tested once a week)
         Command::Submit => command_client.submit().await,
         Command::Logout => command_client.logout().await,

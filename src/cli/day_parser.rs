@@ -1,4 +1,4 @@
-use crate::domain::models::day::Day;
+use crate::domain::models::day::{Day, Days};
 use anyhow::{anyhow, Context};
 use nom::{
     branch::alt,
@@ -9,7 +9,6 @@ use nom::{
     sequence::{delimited, separated_pair},
     Finish, IResult,
 };
-use std::collections::HashSet;
 
 type Range = (Day, Day);
 
@@ -30,7 +29,7 @@ impl From<Range> for Item {
     }
 }
 
-pub(crate) fn parse_days_of_week(input: &str) -> anyhow::Result<HashSet<Day>> {
+pub(crate) fn parse_days_of_week(input: &str) -> anyhow::Result<Days> {
     let (_, items) = parse_items(input)
         // Because of borrow checker limitations for nom together with anyhow
         .map_err(|err| err.to_owned())
@@ -121,7 +120,7 @@ mod tests {
         let days = parse_days_of_week("mon, thu").unwrap();
 
         let expected = [Day::Monday, Day::Thursday];
-        assert_eq!(days, HashSet::from(expected));
+        assert_eq!(days, Days::from(expected));
     }
 
     #[test]
@@ -135,7 +134,7 @@ mod tests {
             Day::Saturday,
             Day::Sunday,
         ];
-        assert_eq!(days, HashSet::from(expected));
+        assert_eq!(days, Days::from(expected));
     }
 
     #[test]
@@ -143,21 +142,21 @@ mod tests {
         let days = parse_days_of_week("mon, mon-wed").unwrap();
 
         let expected = [Day::Monday, Day::Tuesday, Day::Wednesday];
-        assert_eq!(days, HashSet::from(expected));
+        assert_eq!(days, Days::from(expected));
     }
 
     #[test]
     fn empty_range_test() {
         let days = parse_days_of_week("").unwrap();
 
-        assert_eq!(days, HashSet::from([]));
+        assert_eq!(days, Days::from([]));
     }
 
     #[test]
     fn input_with_no_days_test() {
         let days = parse_days_of_week("foo:bar").unwrap();
 
-        assert_eq!(days, HashSet::from([]));
+        assert_eq!(days, Days::from([]));
     }
 
     #[test]
@@ -190,7 +189,7 @@ mod tests {
                 .for_each(|(input_day, expected_day)| {
                     let days = parse_days_of_week(&input_day).unwrap();
 
-                    assert_eq!(days, HashSet::from([expected_day]));
+                    assert_eq!(days, Days::from([expected_day]));
                 })
         }
     }
