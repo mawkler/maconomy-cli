@@ -1,11 +1,10 @@
+use super::day_parser::parse_days_of_week;
 use crate::domain::models::{day::Days, line_number::LineNumber};
 use clap::{Parser, Subcommand};
 use color_print::cformat;
 use std::str::FromStr;
 
-use super::day_parser::parse_days_of_week;
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, clap::ValueEnum)]
 pub(crate) enum Format {
     Json,
     Table,
@@ -36,12 +35,12 @@ pub enum Command {
         /// Week number (NOT YET SUPPORTED)
         #[arg(long, short)]
         week: Option<u8>,
-        /// Output format (defaults to "table")
-        #[arg(long, short)]
-        format: Option<Format>,
+        /// Output format
+        #[arg(long, short, default_value = "table")]
+        format: Format,
     },
 
-    /// Set number of hours on some day for a given job and task
+    /// Set number of hours on day(s) for a given job and task
     Set {
         // TODO: change to string that allows "4:30" hours, etc.
         /// Number of hours to set
@@ -67,7 +66,7 @@ pub enum Command {
         day: Option<Days>,
     },
 
-    /// Remove hours hours on some day for a given job and task
+    /// Remove hours hours on day(s) for a given job and task
     Clear {
         /// Name of the job
         #[arg(long, short)]
@@ -108,9 +107,9 @@ pub enum Command {
     arg_required_else_help = true,
     after_help = cformat!("<bold,underline>Examples:</bold,underline>\
     \n  maconomy get \
-    \n  maconomy set --job '<<job name>>' --task '<<task name>>' --day tuesday 8 \
-    \n  maconomy set --job '<<job name>>' --task '<<task name>>' --day 'mon-wed, fri' 8 \
-    \n  maconomy clear --job '<<job name>>' --task '<<task name>>' \
+    \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' \
+    \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' --day 'mon-wed, fri' \
+    \n  maconomy clear --job '<<job name>>' --task '<<task name>>' --day tuesday \
     \n\
     \n<bold,underline>NOTE:</bold,underline> currently you can only interact with the current week. In the future you'll be able to specify any week.
     ")

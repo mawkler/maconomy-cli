@@ -65,8 +65,7 @@ impl<'a> CommandClient<'a> {
         Ok(())
     }
 
-    pub(crate) async fn get(&self, week: Option<u8>, format: Option<Format>) {
-        let format = format.unwrap_or(Format::Table);
+    pub(crate) async fn get(&self, week: Option<u8>, format: Format) {
         match format {
             Format::Json => self.get_json(week).await.context("JSON"),
             Format::Table => self.get_table(week).await.context("table"),

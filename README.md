@@ -2,20 +2,19 @@
 
 Maconomy command-line interface for interacting with time sheets.
 
-> [!NOTE]
-> This repo is in an early stage. Expect some minor issues and breaking changes.
-
 ## Features
 
 - Editing time sheet
+  - Editing multiple days at once
 - Viewing time sheet, both as table and as JSON
 - Automatically instantiating new week if it hasn't been created yet
 - Automatically creating new lines if the job/task combination isn't in the time sheet
+- Submitting time sheet
 
 ## Usage
 
 ```
-> maconomy set --job 'Some Company' --task 'Development' --day friday 8
+> maconomy set 8 --job 'Some Company' --task 'Development' --day friday
 > maconomy get
 ╭────────────────────────────────────────────────────────────────────╮
 │ Job name      Task name         Mon  Tue  Wed  Thu  Fri   Sat  Sun │
@@ -35,8 +34,9 @@ Usage: maconomy <COMMAND>
 
 Commands:
   get     Get the time sheet for the current week
-  set     Set number of hours on some day for a given job and task
-  clear   Remove hours hours on some day for a given job and task
+  set     Set number of hours on day(s) for a given job and task
+  clear   Remove hours hours on day(s) for a given job and task
+  submit  Submit time sheet for week
   logout  Log out
   line    Operate on entire lines in the time sheet
   help    Print this message or the help of the given subcommand(s)
@@ -47,8 +47,9 @@ Options:
 
 Examples:
   maconomy get
-  maconomy set --job '<job name>' --task '<task name>' --day tuesday 8
-  maconomy clear --job '<job name>' --task '<task name>'
+  maconomy set 8 --job '<job name>' --task '<task name>'
+  maconomy set 8 --job '<job name>' --task '<task name>' --day 'mon-wed, fri'
+  maconomy clear --job '<job name>' --task '<task name>' --day tuesday
 
 NOTE: currently you can only interact with the current week. In the future you'll be able to specify any week.
 ```
@@ -86,9 +87,9 @@ cookie_path = "<path to where auth cookie should be stored>" # Optional, default
 
 ### "Request failed with status 401 Unauthorized"
 
-Sometimes maconomy-cli is unable reauthenticate after your session has expired. maconomy-cli currently authenticates you by opening a browser window, letting you sign in with single-sign on, and then stores your session cookie. It seems like it sometimes it fetches the incorrect authentication cookie. I'll try to fix this, but the optimal solution is to switch to a proper [PKCE](https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow-with-pkce) authentication flow, or similar. However, Maconomy seem to be using some custom authentication on top of SSO that I couldn't get working. That's why I went with the jankier web-browser-cookie-snatching solution.
+**Solution:** Log out with `maconomy logout` and then re-run your previous command.
 
-As a workaround, try logging out with `maconomy logout` and then re-running your previous command.
+Sometimes maconomy-cli is unable reauthenticate after your session has expired. maconomy-cli currently authenticates you by opening a browser window, letting you sign in with single-sign on, and then stores your session cookie. It seems like it sometimes it fetches the incorrect authentication cookie. I'll try to fix this, but the optimal solution is to switch to a proper [PKCE](https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow-with-pkce) authentication flow, or similar. However, Maconomy seem to be using some custom authentication on top of SSO that I couldn't get working. That's why I went with the jankier web-browser-cookie-snatching solution.
 
 ## Development
 
