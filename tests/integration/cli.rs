@@ -1,12 +1,13 @@
-use crate::helpers::maconomy_mock::{
-    mock_add_row, mock_get_instance, mock_get_table_rows, mock_job_number_search, mock_set_hours,
-    mock_tasks_search,
+use crate::helpers::{
+    config::create_test_config,
+    maconomy_mock::{
+        mock_add_row, mock_get_instance, mock_get_table_rows, mock_job_number_search,
+        mock_set_hours, mock_tasks_search,
+    },
 };
 use assert_cmd::{assert::OutputAssertExt, Command};
 use std::{env, ffi};
 use wiremock::MockServer;
-
-const COOKIE_PATH: &str = "tests/integration/helpers/integration_test_maconomy_cookie";
 
 fn run_json(
     args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
@@ -25,10 +26,6 @@ fn run(
     // output.stdout.into_output().to_string()
 }
 
-fn use_mock_auth_cookie_file() {
-    env::set_var("MACONOMY__AUTHENTICATION__SSO__COOKIE_PATH", COOKIE_PATH);
-}
-
 #[tokio::main]
 #[test]
 async fn test_get_timesheet() {
@@ -36,7 +33,7 @@ async fn test_get_timesheet() {
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
-    use_mock_auth_cookie_file();
+    create_test_config();
 
     let expected = serde_json::json!({
       "lines": [
@@ -91,7 +88,7 @@ async fn test_set_hours() {
     // mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;
     mock_set_hours(None).mount(&mock_server).await;
-    use_mock_auth_cookie_file();
+    create_test_config();
 
     // When
     let output = run(
@@ -125,7 +122,7 @@ async fn test_set_hours_err() {
     mock_set_hours(None).mount(&mock_server).await;
     mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;
-    use_mock_auth_cookie_file();
+    create_test_config();
 
     // When
     let output = run(
