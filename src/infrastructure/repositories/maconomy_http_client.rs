@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use anyhow::{anyhow, bail, Context, Result};
+use chrono::NaiveDate;
 use log::{debug, info};
 use reqwest::{
     header::{HeaderMap, ACCEPT, CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT},
@@ -374,6 +375,43 @@ impl MaconomyHttpClient<'_> {
         let concurrency_control = concurrency_control_from_headers(response.headers())?;
         let time_registration = response.json().await.context("Failed to parse response")?;
 
+        Ok((time_registration, concurrency_control.into()))
+    }
+
+    pub(crate) async fn set_week(
+        &self,
+        date: NaiveDate,
+        container_instance: &ContainerInstance,
+    ) -> Result<(TimeRegistration, ConcurrencyControl)> {
+        let concurrency_control = &container_instance.concurrency_control.0;
+        let instance_url = self.get_container_instance_url(&container_instance.id.0);
+        let url = format!("{instance_url}/data/panes/card/0");
+
+        let body = json!({
+            "data": {
+                "datevar": date.to_string(),
+            }
+        });
+
+        let request = self
+            .client
+            .post(url)
+            .header(MACONOMY_CONCURRENCY_CONTROL, concurrency_control)
+            .header(CONTENT_TYPE, MACONOMY_JSON)
+            .body(body.to_string());
+
+        let response = self.send_request(request).await?;
+
+        let status = &response.status();
+        if !status.is_success() {
+            bail!("Server responded with {status}");
+        }
+
+        let concurrency_control = concurrency_control_from_headers(response.headers())?;
+        let time_registration = response
+            .json()
+            .await
+            .context("Failed to parse response to time registration")?;
         Ok((time_registration, concurrency_control.into()))
     }
 

@@ -8,6 +8,7 @@ use std::rc::Rc;
 use tokio::sync::Mutex;
 
 use super::models::day::Days;
+use super::models::week::WeekNumber;
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum SetTimeError {
@@ -36,8 +37,9 @@ impl TimeSheetService<'_> {
         job: &str,
         task: &str,
         days: &Days,
+        week: &WeekNumber,
     ) -> Result<(), SetTimeError> {
-        self.set_time(0.0, days, job, task).await
+        self.set_time(0.0, days, week, job, task).await
     }
 
     /// Sets time (initializes the week if it is uninitialized)
@@ -45,11 +47,12 @@ impl TimeSheetService<'_> {
         &mut self,
         hours: f32,
         days: &Days,
+        week: &WeekNumber,
         job: &str,
         task: &str,
     ) -> Result<(), SetTimeError> {
         let mut repository = self.repository.lock().await;
-        if let Err(err) = repository.set_time(hours, days, job, task).await {
+        if let Err(err) = repository.set_time(hours, days, week, job, task).await {
             return match err {
                 AddLineError::WeekUninitialized(AddRowError::Unknown(err)) => todo!("{}", err),
                 AddLineError::WeekUninitialized(AddRowError::WeekUninitialized) => {
@@ -58,7 +61,7 @@ impl TimeSheetService<'_> {
                     repository.create_new_timesheet().await?;
 
                     repository
-                        .set_time(hours, days, job, task)
+                        .set_time(hours, days, week, job, task)
                         .await
                         .map_err(|err| {
                             let msg = format!(

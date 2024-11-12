@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use super::maconomy_http_client::{
     self, ConcurrencyControl, ContainerInstance, MaconomyHttpClient,
 };
@@ -8,6 +6,7 @@ use crate::{
         day::Days,
         line_number::LineNumber,
         time_sheet::{Line, TimeSheet, Week},
+        week::WeekNumber,
     },
     infrastructure::models::{
         search_response,
@@ -16,7 +15,9 @@ use crate::{
     },
 };
 use anyhow::{anyhow, Context, Result};
+use chrono::{Datelike, Local};
 use log::{debug, info};
+use std::collections::HashSet;
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum AddLineError {
@@ -131,6 +132,7 @@ impl TimeSheetRepository<'_> {
         &mut self,
         hours: f32,
         days: &Days,
+        week: &WeekNumber,
         job: &str,
         task: &str,
     ) -> Result<(), AddLineError> {
@@ -225,7 +227,11 @@ impl TimeSheetRepository<'_> {
         Ok(time_sheet.lines.len() as u8)
     }
 
-    pub(crate) async fn delete_line(&mut self, line_number: &LineNumber) -> Result<()> {
+    pub(crate) async fn delete_line(
+        &mut self,
+        line_number: &LineNumber,
+        week: &WeekNumber,
+    ) -> Result<()> {
         // We need to get the time sheet before we can modify it
         let _ = self
             .get_time_sheet()
@@ -253,6 +259,32 @@ impl TimeSheetRepository<'_> {
         self.time_registration = Some(time_registration.clone());
 
         Ok(())
+    }
+
+    pub(crate) async fn get_week(&mut self, week: &WeekNumber) -> Result<TimeSheet> {
+        // TODO: only call `set_time` if week isn't today's week
+        let _ = self.get_time_registration().await?;
+
+        let container_instance = self
+            .get_container_instance()
+            .await
+            .context("Failed to get container instance")?;
+
+        // TODO: calculate date from week number
+        let year = Local::now().date_naive().year();
+        let date = week
+            .first_day(year)
+            .with_context(|| format!("Failed to get first day of week {week}"))?;
+
+        let (time_registration, concurrency_control) = self
+            .client
+            .set_week(date, &container_instance)
+            .await
+            .context("Failed to set week")?;
+
+        self.update_concurrency_control(concurrency_control);
+
+        Ok(time_registration.into())
     }
 
     async fn get_tasks(

@@ -25,14 +25,20 @@ impl FromStr for Format {
 #[derive(Debug, Subcommand)]
 pub enum Line {
     /// Delete line based on line number (1-indexed)
-    Delete { line_number: LineNumber },
+    Delete {
+        line_number: LineNumber,
+
+        /// Week number
+        #[arg(long, short)]
+        week: Option<u8>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Get the time sheet for the current week
     Get {
-        /// Week number (NOT YET SUPPORTED)
+        /// Week number
         #[arg(long, short)]
         week: Option<u8>,
         /// Output format
@@ -45,6 +51,10 @@ pub enum Command {
         // TODO: change to string that allows "4:30" hours, etc.
         /// Number of hours to set
         hours: f32,
+
+        /// Week number
+        #[arg(long, short)]
+        week: Option<u8>,
 
         /// Name of the job
         #[arg(long, short)]
@@ -86,6 +96,10 @@ pub enum Command {
         /// Also accepts short day names like "mon", "tue", etc.
         #[arg(long, short, value_parser = parse_days_of_week)]
         day: Option<Days>,
+
+        /// Week number
+        #[arg(long, short)]
+        week: Option<u8>,
     },
 
     /// Submit time sheet for week

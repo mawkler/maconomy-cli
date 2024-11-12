@@ -98,7 +98,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn range_parser_test() {
+    fn range_parser() {
         let range = "mon-thu";
         let (_, range) = day_range(range).unwrap();
 
@@ -107,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    fn invalid_range_parser_test() {
+    fn invalid_range_parser() {
         let range = "tue-mon";
         let (_, result) = day_range(range).unwrap();
 
@@ -116,7 +116,7 @@ mod tests {
     }
 
     #[test]
-    fn individual_days_test() {
+    fn individual_days() {
         let days = parse_days_of_week("mon, thu").unwrap();
 
         let expected = [Day::Monday, Day::Thursday];
@@ -124,7 +124,7 @@ mod tests {
     }
 
     #[test]
-    fn days_and_range_test() {
+    fn days_and_range() {
         let days = parse_days_of_week("mon, wed, fri-sun").unwrap();
 
         let expected = [
@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    fn overlapping_day_ranges_test() {
+    fn overlapping_day_ranges() {
         let days = parse_days_of_week("mon, mon-wed").unwrap();
 
         let expected = [Day::Monday, Day::Tuesday, Day::Wednesday];
@@ -146,28 +146,28 @@ mod tests {
     }
 
     #[test]
-    fn empty_range_test() {
+    fn empty_range() {
         let days = parse_days_of_week("").unwrap();
 
         assert_eq!(days, Days::from([]));
     }
 
     #[test]
-    fn input_with_no_days_test() {
+    fn input_with_no_days() {
         let days = parse_days_of_week("foo:bar").unwrap();
 
         assert_eq!(days, Days::from([]));
     }
 
     #[test]
-    fn invalid_range_test() {
+    fn invalid_range() {
         let err: String = parse_days_of_week("tue-mon").unwrap_err().to_string();
 
         assert_eq!(err, "Invalid range");
     }
 
     #[test]
-    fn partial_day_names_test() {
+    fn partial_day_names() {
         // Ensures that "mo", "mon", "mond", etc. all map to `Day::Monday`
         let days = [
             ("monday", Day::Monday),
@@ -194,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn days_in_range_test() {
+    fn gets_days_in_range() {
         let range = (Day::Tuesday, Day::Friday);
         let result = days_in_range(range).unwrap();
         let expected = [Day::Tuesday, Day::Wednesday, Day::Thursday, Day::Friday];
@@ -203,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn days_in_invalid_range_test() {
+    fn days_in_invalid_range() {
         let range = (Day::Tuesday, Day::Monday);
         let result = days_in_range(range);
 
