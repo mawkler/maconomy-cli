@@ -41,16 +41,15 @@ impl<'a> CommandClient<'a> {
         }
     }
 
-    // TODO: allow setting week
-    pub(crate) async fn get_table(&self, week: &WeekNumber) -> anyhow::Result<()> {
-        let time_sheet = self.repository.lock().await.get_week(week).await?;
+    pub(crate) async fn get_table(&self, week: Option<&WeekNumber>) -> anyhow::Result<()> {
+        let time_sheet = self.repository.lock().await.get_time_sheet(week).await?;
 
         println!("{time_sheet}");
         Ok(())
     }
 
-    async fn get_json(&self, week: &WeekNumber) -> anyhow::Result<()> {
-        let time_sheet = self.repository.lock().await.get_week(week).await?;
+    async fn get_json(&self, week: Option<&WeekNumber>) -> anyhow::Result<()> {
+        let time_sheet = self.repository.lock().await.get_time_sheet(week).await?;
         let json =
             serde_json::to_string(&time_sheet).context("Failed to deserialize time sheet")?;
 
@@ -59,9 +58,10 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn get(&self, week: Option<u8>, format: Format) {
+        let week = week.map(WeekNumber::from);
         match format {
-            Format::Json => self.get_json(&week.into()).await.context("JSON"),
-            Format::Table => self.get_table(&week.into()).await.context("table"),
+            Format::Json => self.get_json(week.as_ref()).await.context("JSON"),
+            Format::Table => self.get_table(week.as_ref()).await.context("table"),
         }
         .unwrap_or_else(|err| {
             exit_with_error!("Failed to get time sheet as {}", error_stack_fmt(&err));
@@ -81,10 +81,12 @@ impl<'a> CommandClient<'a> {
         }
 
         let day = get_days(days);
+        let week = week.map(WeekNumber::from);
+
         self.time_sheet_service
             .lock()
             .await
-            .set_time(hours, &day, &week.into(), job, task)
+            .set_time(hours, &day, week.as_ref(), job, task)
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
@@ -106,10 +108,11 @@ impl<'a> CommandClient<'a> {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
+        let week = week.map(WeekNumber::from);
         self.time_sheet_service
             .lock()
             .await
-            .clear(job, task, &get_days(days), &week.into())
+            .clear(job, task, &get_days(days), week.as_ref())
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
@@ -127,10 +130,12 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn delete(&mut self, line_number: &LineNumber, week: Option<u8>) {
+        let week = week.map(WeekNumber::from);
+
         self.repository
             .lock()
             .await
-            .delete_line(line_number, &week.into())
+            .delete_line(line_number, week.as_ref())
             .await
             .unwrap_or_else(|err| {
                 let source = error_stack_fmt(&err);

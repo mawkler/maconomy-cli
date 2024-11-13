@@ -37,7 +37,7 @@ impl TimeSheetService<'_> {
         job: &str,
         task: &str,
         days: &Days,
-        week: &WeekNumber,
+        week: Option<&WeekNumber>,
     ) -> Result<(), SetTimeError> {
         self.set_time(0.0, days, week, job, task).await
     }
@@ -47,7 +47,7 @@ impl TimeSheetService<'_> {
         &mut self,
         hours: f32,
         days: &Days,
-        week: &WeekNumber,
+        week: Option<&WeekNumber>,
         job: &str,
         task: &str,
     ) -> Result<(), SetTimeError> {

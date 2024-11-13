@@ -68,6 +68,11 @@ impl TimeSheetRepository<'_> {
     }
 
     async fn get_time_registration(&mut self) -> Result<TimeRegistration> {
+        // Caching
+        if let Some(time_registration) = &self.time_registration {
+            return Ok(time_registration.clone());
+        }
+
         let container_instance = self.get_container_instance().await?;
         let (time_registration, concurrency_control) = self
             .client
@@ -95,13 +100,13 @@ impl TimeSheetRepository<'_> {
     }
 
     /// Gets and caches time sheet
-    pub(crate) async fn get_time_sheet(&mut self) -> Result<TimeSheet> {
-        if let Some(time_registration) = &self.time_registration {
-            return Ok(time_registration.clone().into());
+    pub(crate) async fn get_time_sheet(&mut self, week: Option<&WeekNumber>) -> Result<TimeSheet> {
+        if let Some(week) = week {
+            return self.get_week(week).await.context("Failed to get week");
         }
 
+        // Fall back to today's week
         let time_registration = self.get_time_registration().await?;
-
         Ok(time_registration.into())
     }
 
@@ -132,12 +137,13 @@ impl TimeSheetRepository<'_> {
         &mut self,
         hours: f32,
         days: &Days,
-        week: &WeekNumber,
+        week: Option<&WeekNumber>,
         job: &str,
         task: &str,
     ) -> Result<(), AddLineError> {
+        info!("Getting time sheet");
         let time_sheet = self
-            .get_time_sheet()
+            .get_time_sheet(week)
             .await
             .context("Failed to get time sheet")?;
 
@@ -151,6 +157,7 @@ impl TimeSheetRepository<'_> {
 
         let days: HashSet<_> = days.iter().map(|&d| d as u8).collect();
 
+        info!("Setting time");
         let concurrency_control = self
             .client
             .set_time(hours, &days, line_number, &container_instance)
@@ -222,26 +229,21 @@ impl TimeSheetRepository<'_> {
         Ok(time_registration.into())
     }
 
-    async fn get_number_of_lines(&mut self) -> Result<u8> {
-        let time_sheet = self.get_time_sheet().await?;
-        Ok(time_sheet.lines.len() as u8)
-    }
-
     pub(crate) async fn delete_line(
         &mut self,
         line_number: &LineNumber,
-        week: &WeekNumber,
+        week: Option<&WeekNumber>,
     ) -> Result<()> {
         // We need to get the time sheet before we can modify it
-        let _ = self
-            .get_time_sheet()
+        let time_sheet = self
+            .get_time_sheet(week)
             .await
             .context("Failed to get time sheet")?;
 
         let line_number = match line_number {
             LineNumber::Number(line_number) => *line_number,
             LineNumber::Last => {
-                let last_line_number = self.get_number_of_lines().await?;
+                let last_line_number = time_sheet.lines.len() as u8;
                 info!("Using line number {last_line_number} as last line number");
                 last_line_number
             }
@@ -261,8 +263,8 @@ impl TimeSheetRepository<'_> {
         Ok(())
     }
 
-    pub(crate) async fn get_week(&mut self, week: &WeekNumber) -> Result<TimeSheet> {
-        // TODO: only call `set_time` if week isn't today's week
+    async fn get_week(&mut self, week: &WeekNumber) -> Result<TimeSheet> {
+        // We have to get the time registration before we can set a week
         let _ = self.get_time_registration().await?;
 
         let container_instance = self
@@ -270,7 +272,6 @@ impl TimeSheetRepository<'_> {
             .await
             .context("Failed to get container instance")?;
 
-        // TODO: calculate date from week number
         let year = Local::now().date_naive().year();
         let date = week
             .first_day(year)
