@@ -57,8 +57,9 @@ impl<'a> CommandClient<'a> {
         Ok(())
     }
 
-    pub(crate) async fn get(&self, week: Option<u8>, format: Format) {
-        let week = week.map(WeekNumber::from);
+    pub(crate) async fn get(&self, week: Option<u8>, year: Option<i32>, format: Format) {
+        let week = create_week_with_fallback(week, year);
+
         match format {
             Format::Json => self.get_json(week.as_ref()).await.context("JSON"),
             Format::Table => self.get_table(week.as_ref()).await.context("table"),
@@ -73,6 +74,7 @@ impl<'a> CommandClient<'a> {
         hours: f32,
         days: Option<Days>,
         week: Option<u8>,
+        year: Option<i32>,
         job: &str,
         task: &str,
     ) {
@@ -81,7 +83,7 @@ impl<'a> CommandClient<'a> {
         }
 
         let day = get_days(days);
-        let week = week.map(WeekNumber::from);
+        let week = create_week_with_fallback(week, year);
 
         self.time_sheet_service
             .lock()
@@ -103,12 +105,13 @@ impl<'a> CommandClient<'a> {
         task: &str,
         days: Option<Days>,
         week: Option<u8>,
+        year: Option<i32>,
     ) {
         if days.as_ref().is_some_and(|days| days.is_empty()) {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
-        let week = week.map(WeekNumber::from);
+        let week = create_week_with_fallback(week, year);
         self.time_sheet_service
             .lock()
             .await
@@ -129,8 +132,13 @@ impl<'a> CommandClient<'a> {
         });
     }
 
-    pub(crate) async fn delete(&mut self, line_number: &LineNumber, week: Option<u8>) {
-        let week = week.map(WeekNumber::from);
+    pub(crate) async fn delete(
+        &mut self,
+        line_number: &LineNumber,
+        week: Option<u8>,
+        year: Option<i32>,
+    ) {
+        let week = create_week_with_fallback(week, year);
 
         self.repository
             .lock()
@@ -163,10 +171,10 @@ fn get_days(days: Option<Days>) -> Days {
     })
 }
 
-impl From<Option<u8>> for WeekNumber {
-    fn from(week: Option<u8>) -> Self {
-        // Fall back to today's week
-        week.unwrap_or_else(|| Local::now().date_naive().iso_week().week() as u8)
-            .into()
-    }
+fn create_week_with_fallback(week: Option<u8>, year: Option<i32>) -> Option<WeekNumber> {
+    week.map(|week| {
+        // Fall back to today's year
+        let year = year.unwrap_or_else(|| year.unwrap_or_else(|| chrono::Utc::now().year()));
+        WeekNumber::new(week, year).unwrap_or_else(|err| exit_with_error!("{err}"))
+    })
 }

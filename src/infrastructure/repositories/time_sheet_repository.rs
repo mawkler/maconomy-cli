@@ -15,7 +15,6 @@ use crate::{
     },
 };
 use anyhow::{anyhow, Context, Result};
-use chrono::{Datelike, Local};
 use log::{debug, info};
 use std::collections::HashSet;
 
@@ -122,11 +121,12 @@ impl TimeSheetRepository<'_> {
                 info!("Found no line for job '{job}', task '{task}'. Creating new line for it");
                 let time_sheet = self.add_line(job, task).await?;
 
-                time_sheet
-                    .find_line_nr(job, task)
-                    .with_context(|| format!(
-                        "format not find job '{job}' and task '{task}', even after creating a new line for it"
-                    ))?
+                time_sheet.find_line_nr(job, task).with_context(|| {
+                    format!(
+                        "format not find job '{job}' and task '{task}', even after creating a new \
+                        line for it"
+                    )
+                })?
             }
         };
 
@@ -272,9 +272,8 @@ impl TimeSheetRepository<'_> {
             .await
             .context("Failed to get container instance")?;
 
-        let year = Local::now().date_naive().year();
         let date = week
-            .first_day(year)
+            .first_day()
             .with_context(|| format!("Failed to get first day of week {week}"))?;
 
         let (time_registration, concurrency_control) = self

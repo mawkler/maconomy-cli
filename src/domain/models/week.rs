@@ -1,27 +1,33 @@
+use anyhow::anyhow;
+use chrono::{NaiveDate, Weekday};
 use std::fmt::Display;
 
-use chrono::{NaiveDate, Weekday};
-
-// TODO: switch from `u8` to `IsoWeek`
 #[derive(Debug, Clone)]
-pub(crate) struct WeekNumber(u8);
-
-impl WeekNumber {
-    pub(crate) fn first_day(&self, year: i32) -> Option<NaiveDate> {
-        NaiveDate::from_isoywd_opt(year, self.0.into(), Weekday::Mon)
-    }
+pub(crate) struct WeekNumber {
+    number: u8,
+    year: i32,
 }
 
-impl From<u8> for WeekNumber {
-    fn from(week: u8) -> Self {
-        Self(week)
+impl WeekNumber {
+    pub(crate) fn new(week: u8, year: i32) -> anyhow::Result<Self> {
+        first_day_of_week(week, year).ok_or(anyhow!("Invalid week '{week}'"))?;
+
+        Ok(Self { number: week, year })
+    }
+
+    pub(crate) fn first_day(&self) -> Option<NaiveDate> {
+        first_day_of_week(self.number, self.year)
     }
 }
 
 impl Display for WeekNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "Week {}, year {}", self.number, self.year)
     }
+}
+
+fn first_day_of_week(week: u8, year: i32) -> Option<NaiveDate> {
+    NaiveDate::from_isoywd_opt(year, week.into(), Weekday::Mon)
 }
 
 #[cfg(test)]
@@ -37,8 +43,8 @@ mod tests {
         ];
 
         for (year, week, expected_date) in dates {
-            let week_number = WeekNumber(week);
-            let date = week_number.first_day(year).unwrap();
+            let week_number = WeekNumber { number: week, year };
+            let date = week_number.first_day().unwrap();
 
             assert_eq!(
                 date,

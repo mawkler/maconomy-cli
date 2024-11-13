@@ -45,25 +45,35 @@ async fn main() -> anyhow::Result<()> {
     );
 
     match parse_arguments() {
-        Command::Get { week, format } => command_client.get(week, format).await,
+        Command::Get { week, year, format } => command_client.get(week, year, format).await,
         Command::Set {
             hours,
-            week,
             day,
+            week,
+            year,
             job,
             task,
-        } => command_client.set(hours, day, week, &job, &task).await,
+        } => {
+            command_client
+                .set(hours, day, week, year, &job, &task)
+                .await
+        }
         Command::Clear {
+            day,
             week,
+            year,
             job,
             task,
-            day,
-        } => command_client.clear(&job, &task, day, week).await,
+        } => command_client.clear(&job, &task, day, week, year).await,
         // TODO: haven't actually tested this yet (can only be tested once a week)
         Command::Submit => command_client.submit().await,
         Command::Logout => command_client.logout().await,
         Command::Line(line) => match line {
-            Line::Delete { line_number, week } => command_client.delete(&line_number, week).await,
+            Line::Delete {
+                line_number,
+                week,
+                year,
+            } => command_client.delete(&line_number, week, year).await,
         },
     };
 

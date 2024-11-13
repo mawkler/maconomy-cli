@@ -31,6 +31,11 @@ pub enum Line {
         /// Week number
         #[arg(long, short)]
         week: Option<u8>,
+
+        /// Year
+        #[arg(long, short, requires = "week")]
+        year: Option<i32>,
+
     },
 }
 
@@ -41,6 +46,11 @@ pub enum Command {
         /// Week number
         #[arg(long, short)]
         week: Option<u8>,
+
+        /// Year
+        #[arg(long, short, requires = "week")]
+        year: Option<i32>,
+
         /// Output format
         #[arg(long, short, default_value = "table")]
         format: Format,
@@ -55,6 +65,10 @@ pub enum Command {
         /// Week number
         #[arg(long, short)]
         week: Option<u8>,
+
+        /// Year
+        #[arg(long, short, requires = "week")]
+        year: Option<i32>,
 
         /// Name of the job
         #[arg(long, short)]
@@ -100,6 +114,11 @@ pub enum Command {
         /// Week number
         #[arg(long, short)]
         week: Option<u8>,
+
+        /// Year
+        #[arg(long, short, requires = "week")]
+        year: Option<i32>,
+
     },
 
     /// Submit time sheet for week
