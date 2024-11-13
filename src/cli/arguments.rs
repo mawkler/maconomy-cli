@@ -28,14 +28,13 @@ pub enum Line {
     Delete {
         line_number: LineNumber,
 
-        /// Week number
+        /// Week number (defaults to current week if omitted)
         #[arg(long, short)]
         week: Option<u8>,
 
-        /// Year
+        /// Year (defaults to current year if omitted)
         #[arg(long, short, requires = "week")]
         year: Option<i32>,
-
     },
 }
 
@@ -43,11 +42,11 @@ pub enum Line {
 pub enum Command {
     /// Get the time sheet for the current week
     Get {
-        /// Week number
+        /// Week number (defaults to current week if omitted)
         #[arg(long, short)]
         week: Option<u8>,
 
-        /// Year
+        /// Year (defaults to current year if omitted)
         #[arg(long, short, requires = "week")]
         year: Option<i32>,
 
@@ -61,14 +60,6 @@ pub enum Command {
         // TODO: change to string that allows "4:30" hours, etc.
         /// Number of hours to set
         hours: f32,
-
-        /// Week number
-        #[arg(long, short)]
-        week: Option<u8>,
-
-        /// Year
-        #[arg(long, short, requires = "week")]
-        year: Option<i32>,
 
         /// Name of the job
         #[arg(long, short)]
@@ -88,6 +79,14 @@ pub enum Command {
         /// Also accepts short day names like "mon", "tue", etc.
         #[arg(long, short, value_parser = parse_days_of_week)]
         day: Option<Days>,
+
+        /// Week number (defaults to current week if omitted)
+        #[arg(long, short)]
+        week: Option<u8>,
+
+        /// Year (defaults to current year if omitted)
+        #[arg(long, short, requires = "week")]
+        year: Option<i32>,
     },
 
     /// Remove hours hours on day(s) for a given job and task
@@ -111,14 +110,13 @@ pub enum Command {
         #[arg(long, short, value_parser = parse_days_of_week)]
         day: Option<Days>,
 
-        /// Week number
+        /// Week number (defaults to current week if omitted)
         #[arg(long, short)]
         week: Option<u8>,
 
-        /// Year
+        /// Year (defaults to current year if omitted)
         #[arg(long, short, requires = "week")]
         year: Option<i32>,
-
     },
 
     /// Submit time sheet for week

@@ -48,22 +48,22 @@ async fn main() -> anyhow::Result<()> {
         Command::Get { week, year, format } => command_client.get(week, year, format).await,
         Command::Set {
             hours,
+            job,
+            task,
             day,
             week,
             year,
-            job,
-            task,
         } => {
             command_client
                 .set(hours, day, week, year, &job, &task)
                 .await
         }
         Command::Clear {
+            job,
+            task,
             day,
             week,
             year,
-            job,
-            task,
         } => command_client.clear(&job, &task, day, week, year).await,
         // TODO: haven't actually tested this yet (can only be tested once a week)
         Command::Submit => command_client.submit().await,
