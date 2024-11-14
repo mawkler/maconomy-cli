@@ -158,13 +158,13 @@ impl TimeSheetRepository<'_> {
         let days: HashSet<_> = days.iter().map(|&d| d as u8).collect();
 
         info!("Setting time");
-        let concurrency_control = self
+        let (time_registration, concurrency_control) = self
             .client
             .set_time(hours, &days, line_number, &container_instance)
             .await
             .with_context(|| format!("Failed to set {hours} hours on row {line_number}"))?;
 
-        // TODO: also update self.time_registration
+        self.time_registration = Some(time_registration);
         self.update_concurrency_control(concurrency_control);
         Ok(())
     }

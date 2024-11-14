@@ -195,7 +195,7 @@ impl MaconomyHttpClient<'_> {
         days: &HashSet<u8>,
         row: u8,
         container_instance: &ContainerInstance,
-    ) -> Result<ConcurrencyControl> {
+    ) -> Result<(TimeRegistration, ConcurrencyControl)> {
         let concurrency_control = &container_instance.concurrency_control.0;
         let instance_url = self.get_container_instance_url(&container_instance.id.0);
         let url = format!("{instance_url}/data/panes/table/{row}");
@@ -218,7 +218,12 @@ impl MaconomyHttpClient<'_> {
             bail!("Server responded with {status}");
         }
 
-        Ok(concurrency_control.into())
+        let time_registration = response
+            .json()
+            .await
+            .context("Failed to parse response to time registration")?;
+
+        Ok((time_registration, concurrency_control.into()))
     }
 
     pub async fn get_job_number_from_name(&self, job_name: &str) -> Result<Option<String>> {
