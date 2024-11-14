@@ -35,7 +35,7 @@ Usage: maconomy <COMMAND>
 Commands:
   get     Get the time sheet for the current week
   set     Set number of hours on day(s) for a given job and task
-  clear   Remove hours hours on day(s) for a given job and task
+  clear   Remove hours on day(s) for a given job and task
   submit  Submit time sheet for week
   logout  Log out
   line    Operate on entire lines in the time sheet

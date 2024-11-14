@@ -5,7 +5,7 @@ use crate::helpers::{
         mock_set_hours, mock_tasks_search,
     },
 };
-use assert_cmd::{assert::OutputAssertExt, Command};
+use assert_cmd::Command;
 use std::{env, ffi};
 use wiremock::MockServer;
 
@@ -13,17 +13,18 @@ fn run_json(
     args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
     server_url: &str,
 ) -> serde_json::Value {
-    let output = run(args, server_url);
+    let output = run(args, server_url).unwrap();
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
 fn run(
     args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
     server_url: &str,
-) -> std::process::Output {
+) -> assert_cmd::Command {
     env::set_var("MACONOMY__MACONOMY_URL", server_url);
-    Command::cargo_bin("maconomy").unwrap().args(args).unwrap()
-    // output.stdout.into_output().to_string()
+    let mut cmd = Command::cargo_bin("maconomy").unwrap();
+    cmd.args(args);
+    cmd
 }
 
 #[tokio::main]
@@ -91,47 +92,50 @@ async fn test_set_hours() {
     create_test_config();
 
     // When
-    let output = run(
-        [
-            "set",
-            "8",
-            "--job",
-            "job one",
-            "--task",
-            "some task one",
-            "--day",
-            "monday",
-        ],
-        &mock_server.uri(),
-    );
+    let cmd = [
+        "set",
+        "8",
+        "--job",
+        "job one",
+        "--task",
+        "some task one",
+        "--day",
+        "monday",
+    ];
+    let mut output = run(cmd, &mock_server.uri());
 
     // Then
-    assert!(output.status.success());
+    output.assert().success();
 }
 
 #[tokio::main]
 #[test]
-#[ignore]
 async fn test_set_hours_err() {
     // Given
-
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
     mock_job_number_search(None).mount(&mock_server).await;
-    mock_set_hours(None).mount(&mock_server).await;
     mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;
     create_test_config();
 
     // When
-    let output = run(
-        ["set", "--job", "doesn't exist", "--task", "some task", "8"],
-        &mock_server.uri(),
-    );
+    let cmd = [
+        "set",
+        "--job",
+        "doesn't exist",
+        "--task",
+        "some task one",
+        "8",
+    ];
+    let mut output = run(cmd, &mock_server.uri());
 
-    // Then
-    // TODO: `output.assert().failure()` doesn't seem to work. Is it because my program panics?
-    // dbg!(&output.stdout.into_output().to_string());
-    output.assert().failure();
+    let expected_stdoud_prefix = "Something went wrong when adding a new line to the time sheet: \
+        did not find job 'doesn't exist' and task 'some task one', even after creating a new line \
+        for it";
+    output
+        .assert()
+        .stderr(predicates::str::starts_with(expected_stdoud_prefix))
+        .failure();
 }

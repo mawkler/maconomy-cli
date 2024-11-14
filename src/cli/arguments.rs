@@ -89,7 +89,7 @@ pub enum Command {
         year: Option<i32>,
     },
 
-    /// Remove hours hours on day(s) for a given job and task
+    /// Remove hours on day(s) for a given job and task
     Clear {
         /// Name of the job
         #[arg(long, short)]

@@ -123,7 +123,7 @@ impl TimeSheetRepository<'_> {
 
                 time_sheet.find_line_nr(job, task).with_context(|| {
                     format!(
-                        "format not find job '{job}' and task '{task}', even after creating a new \
+                        "did not find job '{job}' and task '{task}', even after creating a new \
                         line for it"
                     )
                 })?

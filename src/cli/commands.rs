@@ -17,6 +17,7 @@ use tokio::sync::Mutex;
 
 macro_rules! exit_with_error {
     ($($arg:tt)*) => {{
+        log::warn!("Exiting with error");
         eprintln!($($arg)*);
         std::process::exit(1);
     }};
