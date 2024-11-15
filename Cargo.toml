@@ -40,3 +40,9 @@ assert-json-diff = "2.0.2"
 assert_cmd = "2.0.16"
 wiremock = "0.6.2"
 predicates = "3.1.2"
+insta = { version = "1.41.1", features = ["yaml", "json"] }
+
+# Improved insta runtime
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3

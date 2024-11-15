@@ -1,0 +1,9 @@
+---
+source: tests/integration/cli.rs
+expression: output
+snapshot_kind: text
+---
+Something went wrong when adding a new line to the time sheet: did not find job 'doesn't exist' and task 'some task one', even after creating a new line for it
+
+Error stack:
+  - did not find job 'doesn't exist' and task 'some task one', even after creating a new line for it

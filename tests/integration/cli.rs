@@ -27,64 +27,37 @@ fn run(
     cmd
 }
 
+fn assert_snapshot_predicate() -> predicates::function::FnPredicate<impl Fn(&str) -> bool, str> {
+    predicates::function::function(move |output: &str| {
+        insta::assert_snapshot!(output);
+        true
+    })
+}
+
 #[tokio::main]
 #[test]
-async fn test_get_timesheet() {
+async fn get_timesheet() {
     // Given
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
     create_test_config();
 
-    let expected = serde_json::json!({
-      "lines": [
-        {
-          "job": "Job One",
-          "task": "Some task one",
-          "week": {
-            "monday": 8.0,
-            "tuesday": 0.0,
-            "wednesday": 0.0,
-            "thursday": 0.0,
-            "friday": 0.0,
-            "saturday": 0.0,
-            "sunday": 0.0
-          }
-        },
-        {
-          "job": "Job One",
-          "task": "Some task two",
-          "week": {
-            "monday": 0.0,
-            "tuesday": 0.0,
-            "wednesday": 0.0,
-            "thursday": 0.0,
-            "friday": 0.0,
-            "saturday": 0.0,
-            "sunday": 0.0
-          }
-        }
-      ]
-    });
-
     // When
     let output = run_json(["get", "--format", "json"], &mock_server.uri());
 
     // Then
-    assert_json_diff::assert_json_include!(
-        expected: expected,
-        actual: output
-    );
+    insta::assert_json_snapshot!(output);
 }
 
 #[tokio::main]
 #[test]
-async fn test_set_hours() {
+async fn set_hours() {
     // Given
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
-    // These mocks aren't actually required
+    // These mocks aren't actually required here
     // mock_job_number_search(None).mount(&mock_server).await;
     // mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;
@@ -92,7 +65,7 @@ async fn test_set_hours() {
     create_test_config();
 
     // When
-    let cmd = [
+    let command = [
         "set",
         "8",
         "--job",
@@ -102,15 +75,16 @@ async fn test_set_hours() {
         "--day",
         "monday",
     ];
-    let mut output = run(cmd, &mock_server.uri());
+    let mut output = run(command, &mock_server.uri());
 
     // Then
+    // TODO: try to assert on the values sent to the mock
     output.assert().success();
 }
 
 #[tokio::main]
 #[test]
-async fn test_set_hours_err() {
+async fn set_hours_err() {
     // Given
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
@@ -121,7 +95,7 @@ async fn test_set_hours_err() {
     create_test_config();
 
     // When
-    let cmd = [
+    let command = [
         "set",
         "--job",
         "doesn't exist",
@@ -129,13 +103,11 @@ async fn test_set_hours_err() {
         "some task one",
         "8",
     ];
-    let mut output = run(cmd, &mock_server.uri());
+    let mut output = run(command, &mock_server.uri());
 
-    let expected_stdoud_prefix = "Something went wrong when adding a new line to the time sheet: \
-        did not find job 'doesn't exist' and task 'some task one', even after creating a new line \
-        for it";
+    // Then
     output
         .assert()
-        .stderr(predicates::str::starts_with(expected_stdoud_prefix))
+        .stderr(assert_snapshot_predicate())
         .failure();
 }
