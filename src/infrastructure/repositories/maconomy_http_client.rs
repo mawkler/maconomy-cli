@@ -233,10 +233,10 @@ impl MaconomyHttpClient<'_> {
     );
 
         let restriction = format!(
-            "(customernumber like '*{job_name}*' \
-                or jobnumber like '*{job_name}*' \
-                or jobname like '*{job_name}*' \
-                or name1 like '*{job_name}*')"
+            "(customernumber = '{job_name}' \
+                or jobnumber = '{job_name}' \
+                or jobname = '{job_name}' \
+                or name1 = '{job_name}')"
         );
         let body = json!({
             "restriction": restriction,

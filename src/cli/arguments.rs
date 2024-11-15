@@ -141,8 +141,6 @@ pub enum Command {
     \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' \
     \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' --day 'mon-wed, fri' \
     \n  maconomy clear --job '<<job name>>' --task '<<task name>>' --day tuesday \
-    \n\
-    \n<bold,underline>NOTE:</bold,underline> currently you can only interact with the current week. In the future you'll be able to specify any week.
     ")
 )]
 pub struct Args {

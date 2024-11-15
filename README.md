@@ -50,8 +50,6 @@ Examples:
   maconomy set 8 --job '<job name>' --task '<task name>'
   maconomy set 8 --job '<job name>' --task '<task name>' --day 'mon-wed, fri'
   maconomy clear --job '<job name>' --task '<task name>' --day tuesday
-
-NOTE: currently you can only interact with the current week. In the future you'll be able to specify any week.
 ```
 
 You can also run `maconomy get --help`, `maconomy set --help`, etc. to see more info on how to use each command.

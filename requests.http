@@ -123,7 +123,7 @@ Accept: application/vnd.deltek.maconomy.containers+json; version=5.0
 Content-type: application/vnd.deltek.maconomy.containers+json; version=5.0
 
 {
-  "restriction": "(customernumber like '*{{job_name}}*' or jobnumber like '*{{job_name}}*' or jobname like '*{{job_name}}*' or name1 like '*{{job_name}}*')",
+  "restriction": "(customernumber = '{{job_name}}' or jobnumber = '{{job_name}}' or jobname = '{{job_name}}' or name1 = '{{job_name}}')"
   "fields": [
     "jobnumber"
   ]
