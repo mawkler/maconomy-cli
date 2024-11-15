@@ -175,7 +175,10 @@ impl AuthService {
         })
         .to_string();
 
-        let mut file = tokio::fs::File::create(&*self.get_cookie_path()?)
+        let cookie_path = &*self.get_cookie_path()?;
+        ensure_directory_exists(cookie_path)?;
+
+        let mut file = tokio::fs::File::create(cookie_path)
             .await
             .context("Failed to create cookie file")?;
         file.write_all(cookie.as_bytes())
@@ -226,4 +229,13 @@ async fn wait_for_auth_cookie(page: &Page) -> Result<Cookie> {
 
         tokio::time::sleep(POLL_INTERVAL).await;
     }
+}
+
+fn ensure_directory_exists(file_path: &str) -> Result<()> {
+    if let Some(parent) = std::path::Path::new(file_path).parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create directories for {file_path}"))?;
+    }
+
+    Ok(())
 }
