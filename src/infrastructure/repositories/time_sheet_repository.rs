@@ -105,6 +105,9 @@ impl TimeSheetRepository<'_> {
         }
 
         // Fall back to today's week
+        //
+        // This is a small optimization since we don't need to make an extra request if we want the
+        // current week (i.e. `week` is `None`)
         let time_registration = self.get_time_registration().await?;
         Ok(time_registration.into())
     }
@@ -306,8 +309,18 @@ impl TimeSheetRepository<'_> {
             .with_context(|| format!("Failed to get tasks for job '{job}'"))
     }
 
-    pub(crate) async fn submit(&mut self) -> Result<()> {
-        let container_instance = self.get_container_instance().await?;
+    pub(crate) async fn submit(&mut self, week: Option<&WeekNumber>) -> Result<()> {
+        // Set the week
+        let _ = self
+            .get_time_sheet(week)
+            .await
+            .context("Failed to get time sheet")?;
+
+        let container_instance = self
+            .get_container_instance()
+            .await
+            .context("Failed to get container instance")?;
+
         let concurrency_control = self
             .client
             .submit(&container_instance)

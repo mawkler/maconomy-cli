@@ -48,8 +48,9 @@ Options:
 Examples:
   maconomy get
   maconomy set 8 --job '<job name>' --task '<task name>'
-  maconomy set 8 --job '<job name>' --task '<task name>' --day 'mon-wed, fri'
+  maconomy set 8 --job '<job name>' --task '<task name>' --day 'mon-wed, fri' --week 46
   maconomy clear --job '<job name>' --task '<task name>' --day tuesday
+  maconomy line delete 2
 ```
 
 You can also run `maconomy get --help`, `maconomy set --help`, etc. to see more info on how to use each command.

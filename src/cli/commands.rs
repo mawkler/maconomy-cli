@@ -59,7 +59,7 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn get(&self, week: Option<u8>, year: Option<i32>, format: Format) {
-        let week = create_week_with_fallback(week, year);
+        let week = to_week_with_fallback(week, year);
 
         match format {
             Format::Json => self.get_json(week.as_ref()).await.context("JSON"),
@@ -84,7 +84,7 @@ impl<'a> CommandClient<'a> {
         }
 
         let day = get_days(days);
-        let week = create_week_with_fallback(week, year);
+        let week = to_week_with_fallback(week, year);
 
         self.time_sheet_service
             .lock()
@@ -112,7 +112,7 @@ impl<'a> CommandClient<'a> {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
-        let week = create_week_with_fallback(week, year);
+        let week = to_week_with_fallback(week, year);
         self.time_sheet_service
             .lock()
             .await
@@ -139,7 +139,7 @@ impl<'a> CommandClient<'a> {
         week: Option<u8>,
         year: Option<i32>,
     ) {
-        let week = create_week_with_fallback(week, year);
+        let week = to_week_with_fallback(week, year);
 
         self.repository
             .lock()
@@ -152,11 +152,12 @@ impl<'a> CommandClient<'a> {
             });
     }
 
-    pub(crate) async fn submit(&mut self) {
+    pub(crate) async fn submit(&mut self, week: Option<u8>, year: Option<i32>) {
+        let week = to_week_with_fallback(week, year);
         self.repository
             .lock()
             .await
-            .submit()
+            .submit(week.as_ref())
             .await
             .unwrap_or_else(|err| {
                 exit_with_error!("Failed to submit: {}", error_stack_fmt(&err));
@@ -172,10 +173,8 @@ fn get_days(days: Option<Days>) -> Days {
     })
 }
 
-fn create_week_with_fallback(week: Option<u8>, year: Option<i32>) -> Option<WeekNumber> {
+fn to_week_with_fallback(week: Option<u8>, year: Option<i32>) -> Option<WeekNumber> {
     week.map(|week| {
-        // Fall back to today's year
-        let year = year.unwrap_or_else(|| year.unwrap_or_else(|| chrono::Utc::now().year()));
-        WeekNumber::new(week, year).unwrap_or_else(|err| exit_with_error!("{err}"))
+        WeekNumber::new_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"))
     })
 }

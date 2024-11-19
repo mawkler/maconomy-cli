@@ -420,7 +420,6 @@ impl MaconomyHttpClient<'_> {
         Ok((time_registration, concurrency_control.into()))
     }
 
-    // TODO: hasn't been tested yet
     pub(crate) async fn submit(
         &self,
         container_instance: &ContainerInstance,

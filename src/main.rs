@@ -65,8 +65,7 @@ async fn main() -> anyhow::Result<()> {
             week,
             year,
         } => command_client.clear(&job, &task, day, week, year).await,
-        // TODO: haven't actually tested this yet (can only be tested once a week)
-        Command::Submit => command_client.submit().await,
+        Command::Submit { week, year } => command_client.submit(week, year).await,
         Command::Logout => command_client.logout().await,
         Command::Line(line) => match line {
             Line::Delete {

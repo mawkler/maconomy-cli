@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use chrono::{NaiveDate, Weekday};
+use chrono::{Datelike, NaiveDate, Weekday};
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]
@@ -13,6 +13,12 @@ impl WeekNumber {
         first_day_of_week(week, year).ok_or(anyhow!("Invalid week '{week}'"))?;
 
         Ok(Self { number: week, year })
+    }
+
+    pub(crate) fn new_with_fallback(week: u8, year: Option<i32>) -> anyhow::Result<Self> {
+        // Fall back to today's year
+        let year = year.unwrap_or_else(|| year.unwrap_or_else(|| chrono::Utc::now().year()));
+        WeekNumber::new(week, year)
     }
 
     pub(crate) fn first_day(&self) -> Option<NaiveDate> {

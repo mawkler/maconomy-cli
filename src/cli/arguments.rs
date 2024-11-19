@@ -120,7 +120,15 @@ pub enum Command {
     },
 
     /// Submit time sheet for week
-    Submit,
+    Submit {
+        /// Week number (defaults to current week if omitted)
+        #[arg(long, short)]
+        week: Option<u8>,
+
+        /// Year (defaults to current year if omitted)
+        #[arg(long, short, requires = "week")]
+        year: Option<i32>,
+    },
 
     /// Log out
     Logout,
@@ -139,8 +147,9 @@ pub enum Command {
     after_help = cformat!("<bold,underline>Examples:</bold,underline>\
     \n  maconomy get \
     \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' \
-    \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' --day 'mon-wed, fri' \
+    \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' --day 'mon-wed, fri' --week 46 \
     \n  maconomy clear --job '<<job name>>' --task '<<task name>>' --day tuesday \
+    \n  maconomy line delete 2 \
     ")
 )]
 pub struct Args {
