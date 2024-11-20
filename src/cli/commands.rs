@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::Context;
 use chrono::{Datelike, Local};
+use log::info;
 use std::collections::HashSet;
 use std::rc::Rc;
 use tokio::sync::Mutex;
@@ -42,14 +43,14 @@ impl<'a> CommandClient<'a> {
         }
     }
 
-    pub(crate) async fn get_table(&self, week: Option<&WeekNumber>) -> anyhow::Result<()> {
+    pub(crate) async fn get_table(&self, week: &WeekNumber) -> anyhow::Result<()> {
         let time_sheet = self.repository.lock().await.get_time_sheet(week).await?;
 
         println!("{time_sheet}");
         Ok(())
     }
 
-    async fn get_json(&self, week: Option<&WeekNumber>) -> anyhow::Result<()> {
+    async fn get_json(&self, week: &WeekNumber) -> anyhow::Result<()> {
         let time_sheet = self.repository.lock().await.get_time_sheet(week).await?;
         let json =
             serde_json::to_string(&time_sheet).context("Failed to deserialize time sheet")?;
@@ -58,12 +59,13 @@ impl<'a> CommandClient<'a> {
         Ok(())
     }
 
-    pub(crate) async fn get(&self, week: Option<u8>, year: Option<i32>, format: Format) {
-        let week = to_week_with_fallback(week, year);
+    pub(crate) async fn get(&self, week: Option<String>, year: Option<i32>, format: Format) {
+        let week =
+            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
 
         match format {
-            Format::Json => self.get_json(week.as_ref()).await.context("JSON"),
-            Format::Table => self.get_table(week.as_ref()).await.context("table"),
+            Format::Json => self.get_json(&week).await.context("JSON"),
+            Format::Table => self.get_table(&week).await.context("table"),
         }
         .unwrap_or_else(|err| {
             exit_with_error!("Failed to get time sheet as {}", error_stack_fmt(&err));
@@ -74,7 +76,7 @@ impl<'a> CommandClient<'a> {
         &mut self,
         hours: f32,
         days: Option<Days>,
-        week: Option<u8>,
+        week: Option<String>,
         year: Option<i32>,
         job: &str,
         task: &str,
@@ -84,12 +86,13 @@ impl<'a> CommandClient<'a> {
         }
 
         let day = get_days(days);
-        let week = to_week_with_fallback(week, year);
+        let week =
+            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
 
         self.time_sheet_service
             .lock()
             .await
-            .set_time(hours, &day, week.as_ref(), job, task)
+            .set_time(hours, &day, &week, job, task)
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
@@ -105,18 +108,19 @@ impl<'a> CommandClient<'a> {
         job: &str,
         task: &str,
         days: Option<Days>,
-        week: Option<u8>,
+        week: Option<String>,
         year: Option<i32>,
     ) {
         if days.as_ref().is_some_and(|days| days.is_empty()) {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
-        let week = to_week_with_fallback(week, year);
+        let week =
+            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
         self.time_sheet_service
             .lock()
             .await
-            .clear(job, task, &get_days(days), week.as_ref())
+            .clear(job, task, &get_days(days), &week)
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
@@ -136,15 +140,16 @@ impl<'a> CommandClient<'a> {
     pub(crate) async fn delete(
         &mut self,
         line_number: &LineNumber,
-        week: Option<u8>,
+        week: Option<String>,
         year: Option<i32>,
     ) {
-        let week = to_week_with_fallback(week, year);
+        let week =
+            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
 
         self.repository
             .lock()
             .await
-            .delete_line(line_number, week.as_ref())
+            .delete_line(line_number, &week)
             .await
             .unwrap_or_else(|err| {
                 let source = error_stack_fmt(&err);
@@ -152,12 +157,14 @@ impl<'a> CommandClient<'a> {
             });
     }
 
-    pub(crate) async fn submit(&mut self, week: Option<u8>, year: Option<i32>) {
-        let week = to_week_with_fallback(week, year);
+    pub(crate) async fn submit(&mut self, week: Option<String>, year: Option<i32>) {
+        let week =
+            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+
         self.repository
             .lock()
             .await
-            .submit(week.as_ref())
+            .submit(&week)
             .await
             .unwrap_or_else(|err| {
                 exit_with_error!("Failed to submit: {}", error_stack_fmt(&err));
@@ -173,8 +180,35 @@ fn get_days(days: Option<Days>) -> Days {
     })
 }
 
-fn to_week_with_fallback(week: Option<u8>, year: Option<i32>) -> Option<WeekNumber> {
-    week.map(|week| {
-        WeekNumber::new_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"))
-    })
+// TODO: refactor this so that it lives on WeekNumber and parse_week calls this instead of
+// vice-versa
+fn get_week_with_fallback(week: Option<String>, year: Option<i32>) -> anyhow::Result<WeekNumber> {
+    if let Some(week) = week {
+        let week = parse_week(week)?;
+
+        let week = WeekNumber::new_with_fallback(week, year)?;
+        Ok(week)
+    } else {
+        let week = Local::now().date_naive().iso_week().week().try_into();
+        let week = week.expect("Week numbers are always less than 255");
+
+        WeekNumber::new_with_fallback(week, year)
+    }
+}
+
+fn parse_week(week: String) -> anyhow::Result<u8> {
+    let week = match week.trim().to_lowercase().as_str() {
+        "previous" => {
+            let week = Local::now().date_naive().iso_week().week() - 1;
+            info!("Using previous week number: {week}");
+            Ok(week)
+        }
+        number => number
+            .parse()
+            .with_context(|| format!("Invalid week number '{week}'")),
+    }?
+    .try_into()
+    .expect("Week numbers are always less than 255");
+
+    Ok(week)
 }

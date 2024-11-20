@@ -2,7 +2,7 @@ use crate::domain::models::time_sheet::{Line, TimeSheet};
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 use tabled::settings::{
-    object::Rows, style::BorderColor, themes::Colorization, Color, Style, Theme,
+    object::Rows, style::BorderColor, themes::Colorization, Color, Panel, Style, Theme,
 };
 
 #[derive(tabled::Tabled, Default)]
@@ -89,6 +89,7 @@ impl Display for TimeSheet {
                 [tabled::settings::Color::BOLD],
                 Rows::first(),
             ))
+            .with(Panel::footer(format!("Week {}", self.week_number)))
             .with(gray_borders());
 
         write!(f, "{table}")

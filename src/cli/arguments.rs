@@ -30,7 +30,7 @@ pub enum Line {
 
         /// Week number (defaults to current week if omitted)
         #[arg(long, short)]
-        week: Option<u8>,
+        week: Option<String>,
 
         /// Year (defaults to current year if omitted)
         #[arg(long, short, requires = "week")]
@@ -44,7 +44,7 @@ pub enum Command {
     Get {
         /// Week number (defaults to current week if omitted)
         #[arg(long, short)]
-        week: Option<u8>,
+        week: Option<String>,
 
         /// Year (defaults to current year if omitted)
         #[arg(long, short, requires = "week")]
@@ -82,7 +82,7 @@ pub enum Command {
 
         /// Week number (defaults to current week if omitted)
         #[arg(long, short)]
-        week: Option<u8>,
+        week: Option<String>,
 
         /// Year (defaults to current year if omitted)
         #[arg(long, short, requires = "week")]
@@ -112,7 +112,7 @@ pub enum Command {
 
         /// Week number (defaults to current week if omitted)
         #[arg(long, short)]
-        week: Option<u8>,
+        week: Option<String>,
 
         /// Year (defaults to current year if omitted)
         #[arg(long, short, requires = "week")]
@@ -123,7 +123,7 @@ pub enum Command {
     Submit {
         /// Week number (defaults to current week if omitted)
         #[arg(long, short)]
-        week: Option<u8>,
+        week: Option<String>,
 
         /// Year (defaults to current year if omitted)
         #[arg(long, short, requires = "week")]

@@ -29,14 +29,15 @@ impl Line {
     }
 }
 
-#[derive(Default, Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize)]
 pub(crate) struct TimeSheet {
     pub(crate) lines: Vec<Line>,
+    pub(crate) week_number: u8,
 }
 
 impl TimeSheet {
-    pub(crate) fn new(lines: Vec<Line>) -> Self {
-        Self { lines }
+    pub(crate) fn new(lines: Vec<Line>, week_number: u8) -> Self {
+        Self { lines, week_number }
     }
 }
 

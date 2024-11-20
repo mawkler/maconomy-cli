@@ -42,6 +42,15 @@ pub(crate) fn mock_get_instance(response: Option<wiremock::ResponseTemplate>) ->
     create_mock(&path_regex, default_body, response)
 }
 
+pub(crate) fn mock_set_week(response: Option<wiremock::ResponseTemplate>) -> wiremock::Mock {
+    let path_regex = format!(
+        "/containers/{COMPANY_REGEX}/timeregistration/instances/{UUID_REGEX}/data/panes/card/0"
+    );
+    let default_body = mock_data::get_mock_table_rows_response();
+
+    create_mock(&path_regex, default_body, response)
+}
+
 pub(crate) fn mock_get_table_rows(response: Option<wiremock::ResponseTemplate>) -> wiremock::Mock {
     let path_regex =
         format!("/containers/{COMPANY_REGEX}/timeregistration/instances/{UUID_REGEX}/data;any$");

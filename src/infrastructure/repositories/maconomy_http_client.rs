@@ -383,6 +383,7 @@ impl MaconomyHttpClient<'_> {
         Ok((time_registration, concurrency_control.into()))
     }
 
+    // Setting the week also returns its time registration
     pub(crate) async fn set_week(
         &self,
         date: NaiveDate,

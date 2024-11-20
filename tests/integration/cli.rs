@@ -2,7 +2,7 @@ use crate::helpers::{
     config::create_test_config,
     maconomy_mock::{
         mock_add_row, mock_get_instance, mock_get_table_rows, mock_job_number_search,
-        mock_set_hours, mock_tasks_search,
+        mock_set_hours, mock_set_week, mock_tasks_search,
     },
 };
 use assert_cmd::Command;
@@ -41,6 +41,7 @@ async fn get_timesheet() {
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
+    mock_set_week(None).mount(&mock_server).await;
     create_test_config();
 
     // When
@@ -57,6 +58,7 @@ async fn set_hours() {
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
+    mock_set_week(None).mount(&mock_server).await;
     // These mocks aren't actually required here
     // mock_job_number_search(None).mount(&mock_server).await;
     // mock_tasks_search(None).mount(&mock_server).await;
@@ -89,6 +91,7 @@ async fn set_hours_err() {
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
+    mock_set_week(None).mount(&mock_server).await;
     mock_job_number_search(None).mount(&mock_server).await;
     mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;

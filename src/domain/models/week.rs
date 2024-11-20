@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use chrono::{Datelike, NaiveDate, Weekday};
 use std::fmt::Display;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub(crate) struct WeekNumber {
     number: u8,
     year: i32,

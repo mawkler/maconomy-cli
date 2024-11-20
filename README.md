@@ -99,6 +99,9 @@ cargo run
 
 # To pass arguments to maconomy-cli you can use `--`:
 cargo run -- set --job '<job name>' --task '<task name>' 8
+
+# To get the full debug log printed to stderr
+RUST_LOG=debug cargo run -- ...
 ```
 
 To run tests:

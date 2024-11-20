@@ -99,16 +99,27 @@ impl TimeSheetRepository<'_> {
     }
 
     /// Gets and caches time sheet
-    pub(crate) async fn get_time_sheet(&mut self, week: Option<&WeekNumber>) -> Result<TimeSheet> {
-        if let Some(week) = week {
-            return self.get_week(week).await.context("Failed to get week");
-        }
+    pub(crate) async fn get_time_sheet(&mut self, week: &WeekNumber) -> Result<TimeSheet> {
+        // We have to get the time registration before we can set a week
+        let _ = self.get_time_registration().await?;
 
-        // Fall back to today's week
-        //
-        // This is a small optimization since we don't need to make an extra request if we want the
-        // current week (i.e. `week` is `None`)
-        let time_registration = self.get_time_registration().await?;
+        let container_instance = self
+            .get_container_instance()
+            .await
+            .context("Failed to get container instance")?;
+
+        let date = week
+            .first_day()
+            .with_context(|| format!("Failed to get first day of week {week}"))?;
+
+        let (time_registration, concurrency_control) = self
+            .client
+            .set_week(date, &container_instance)
+            .await
+            .context("Failed to set week")?;
+
+        self.update_concurrency_control(concurrency_control);
+
         Ok(time_registration.into())
     }
 
@@ -140,7 +151,7 @@ impl TimeSheetRepository<'_> {
         &mut self,
         hours: f32,
         days: &Days,
-        week: Option<&WeekNumber>,
+        week: &WeekNumber,
         job: &str,
         task: &str,
     ) -> Result<(), AddLineError> {
@@ -235,7 +246,7 @@ impl TimeSheetRepository<'_> {
     pub(crate) async fn delete_line(
         &mut self,
         line_number: &LineNumber,
-        week: Option<&WeekNumber>,
+        week: &WeekNumber,
     ) -> Result<()> {
         // We need to get the time sheet before we can modify it
         let time_sheet = self
@@ -266,30 +277,6 @@ impl TimeSheetRepository<'_> {
         Ok(())
     }
 
-    async fn get_week(&mut self, week: &WeekNumber) -> Result<TimeSheet> {
-        // We have to get the time registration before we can set a week
-        let _ = self.get_time_registration().await?;
-
-        let container_instance = self
-            .get_container_instance()
-            .await
-            .context("Failed to get container instance")?;
-
-        let date = week
-            .first_day()
-            .with_context(|| format!("Failed to get first day of week {week}"))?;
-
-        let (time_registration, concurrency_control) = self
-            .client
-            .set_week(date, &container_instance)
-            .await
-            .context("Failed to set week")?;
-
-        self.update_concurrency_control(concurrency_control);
-
-        Ok(time_registration.into())
-    }
-
     async fn get_tasks(
         &self,
         job: &str,
@@ -309,7 +296,7 @@ impl TimeSheetRepository<'_> {
             .with_context(|| format!("Failed to get tasks for job '{job}'"))
     }
 
-    pub(crate) async fn submit(&mut self, week: Option<&WeekNumber>) -> Result<()> {
+    pub(crate) async fn submit(&mut self, week: &WeekNumber) -> Result<()> {
         // Set the week
         let _ = self
             .get_time_sheet(week)
@@ -352,13 +339,16 @@ impl From<TableRecord> for Line {
 
 impl From<TimeRegistration> for TimeSheet {
     fn from(time_registration: TimeRegistration) -> Self {
-        let lines: Vec<_> = time_registration
-            .panes
-            .table
-            .records
-            .into_iter()
-            .map(Line::from)
-            .collect();
-        Self::new(lines)
+        let table_records = time_registration.panes.table.records;
+        let card_records = time_registration.panes.card.records;
+
+        let lines: Vec<_> = table_records.into_iter().map(Line::from).collect();
+        let week = card_records
+            .first()
+            .expect("time registration contains no records")
+            .data
+            .weeknumbervar;
+
+        Self::new(lines, week)
     }
 }
