@@ -10,7 +10,7 @@ use crate::{
     utils::errors::error_stack_fmt,
 };
 use anyhow::Context;
-use chrono::{Datelike, Local};
+use chrono::Datelike;
 use log::info;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -175,7 +175,7 @@ impl<'a> CommandClient<'a> {
 fn get_days(days: Option<Days>) -> Days {
     days.unwrap_or_else(|| {
         // Fall back to today's weekday
-        let today = Local::now().date_naive().weekday().into();
+        let today = chrono::Local::now().date_naive().weekday().into();
         HashSet::from([today])
     })
 }
@@ -189,8 +189,10 @@ fn get_week_with_fallback(week: Option<String>, year: Option<i32>) -> anyhow::Re
         let week = WeekNumber::new_with_fallback(week, year)?;
         Ok(week)
     } else {
-        let week = Local::now().date_naive().iso_week().week().try_into();
-        let week = week.expect("Week numbers are always less than 255");
+        let week = chrono::Local::now().date_naive().iso_week().week();
+        let week = week
+            .try_into()
+            .expect("Week numbers are always less than 255");
 
         WeekNumber::new_with_fallback(week, year)
     }
@@ -199,7 +201,8 @@ fn get_week_with_fallback(week: Option<String>, year: Option<i32>) -> anyhow::Re
 fn parse_week(week: String) -> anyhow::Result<u8> {
     let week = match week.trim().to_lowercase().as_str() {
         "previous" => {
-            let week = Local::now().date_naive().iso_week().week() - 1;
+            let today_week_last = chrono::Local::now().date_naive() - chrono::Duration::weeks(1);
+            let week = today_week_last.iso_week().week();
             info!("Using previous week number: {week}");
             Ok(week)
         }
