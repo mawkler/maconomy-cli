@@ -60,8 +60,7 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn get(&self, week: Option<String>, year: Option<i32>, format: Format) {
-        let week =
-            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
 
         match format {
             Format::Json => self.get_json(&week).await.context("JSON"),
@@ -86,8 +85,7 @@ impl<'a> CommandClient<'a> {
         }
 
         let day = get_days(days);
-        let week =
-            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
 
         self.time_sheet_service
             .lock()
@@ -115,8 +113,7 @@ impl<'a> CommandClient<'a> {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
-        let week =
-            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
         self.time_sheet_service
             .lock()
             .await
@@ -143,8 +140,7 @@ impl<'a> CommandClient<'a> {
         week: Option<String>,
         year: Option<i32>,
     ) {
-        let week =
-            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
 
         self.repository
             .lock()
@@ -158,8 +154,7 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn submit(&mut self, week: Option<String>, year: Option<i32>) {
-        let week =
-            get_week_with_fallback(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
 
         self.repository
             .lock()
@@ -180,38 +175,29 @@ fn get_days(days: Option<Days>) -> Days {
     })
 }
 
-// TODO: refactor this so that it lives on WeekNumber and parse_week calls this instead of
-// vice-versa
-fn get_week_with_fallback(week: Option<String>, year: Option<i32>) -> anyhow::Result<WeekNumber> {
-    if let Some(week) = week {
-        let week = parse_week(week)?;
-
-        let week = WeekNumber::new_with_fallback(week, year)?;
-        Ok(week)
-    } else {
-        let week = chrono::Local::now().date_naive().iso_week().week();
-        let week = week
-            .try_into()
-            .expect("Week numbers are always less than 255");
-
-        WeekNumber::new_with_fallback(week, year)
-    }
-}
-
-fn parse_week(week: String) -> anyhow::Result<u8> {
-    let week = match week.trim().to_lowercase().as_str() {
+fn parse_week_number(week: String) -> anyhow::Result<u8> {
+    match week.trim().to_lowercase().as_str() {
         "previous" => {
+            // TODO: make sure that the correct year gets set if we do `previous` on week 1
             let today_week_last = chrono::Local::now().date_naive() - chrono::Duration::weeks(1);
-            let week = today_week_last.iso_week().week();
+            let week = today_week_last
+                .iso_week()
+                .week()
+                .try_into()
+                .expect("Week numbers are always less than 255");
+
             info!("Using previous week number: {week}");
             Ok(week)
         }
         number => number
             .parse()
             .with_context(|| format!("Invalid week number '{week}'")),
-    }?
-    .try_into()
-    .expect("Week numbers are always less than 255");
+    }
+}
+
+fn maybe_parse_week(week: Option<String>, year: Option<i32>) -> anyhow::Result<WeekNumber> {
+    let week = week.map(parse_week_number).transpose()?;
+    let week = WeekNumber::new_with_fallback(week, year)?;
 
     Ok(week)
 }

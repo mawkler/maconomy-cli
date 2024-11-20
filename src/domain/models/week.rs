@@ -15,10 +15,25 @@ impl WeekNumber {
         Ok(Self { number: week, year })
     }
 
-    pub(crate) fn new_with_fallback(week: u8, year: Option<i32>) -> anyhow::Result<Self> {
+    fn new_with_year_fallback(week: u8, year: Option<i32>) -> anyhow::Result<Self> {
         // Fall back to today's year
-        let year = year.unwrap_or_else(|| year.unwrap_or_else(|| chrono::Utc::now().year()));
+        let year = year.unwrap_or_else(|| chrono::Utc::now().year());
         WeekNumber::new(week, year)
+    }
+
+    pub(crate) fn new_with_fallback(
+        week: Option<u8>,
+        year: Option<i32>,
+    ) -> anyhow::Result<WeekNumber> {
+        let week = week.unwrap_or_else(|| {
+            // Fall back to today's week
+            let this_week = chrono::Local::now().date_naive().iso_week().week();
+            this_week
+                .try_into()
+                .expect("Week numbers are always less than 255")
+        });
+
+        WeekNumber::new_with_year_fallback(week, year)
     }
 
     pub(crate) fn first_day(&self) -> Option<NaiveDate> {
