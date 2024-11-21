@@ -142,6 +142,7 @@ pub enum Command {
     \n  maconomy get \
     \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' \
     \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' --day 'mon-wed, fri' --week 46 \
+    \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' --day mo --previous-week 2 \
     \n  maconomy clear --job '<<job name>>' --task '<<task name>>' --day tuesday \
     \n  maconomy line delete 2 \
     ")
