@@ -59,14 +59,8 @@ impl<'a> CommandClient<'a> {
         Ok(())
     }
 
-    pub(crate) async fn get(
-        &self,
-        week: Option<u8>,
-        previous_week: Option<u8>,
-        year: Option<i32>,
-        format: Format,
-    ) {
-        let week = get_week_number(week, previous_week, year);
+    pub(crate) async fn get(&self, week: super::arguments::Week, format: Format) {
+        let week = get_week_number(&week.number, &week.previous, &week.year);
 
         match format {
             Format::Json => self.get_json(&week).await.context("JSON"),
@@ -80,22 +74,20 @@ impl<'a> CommandClient<'a> {
     pub(crate) async fn set(
         &mut self,
         hours: f32,
-        days: Option<Days>,
-        week: super::arguments::Week,
-        job: &str,
-        task: &str,
+        days: &super::arguments::Days,
+        task: &super::arguments::Task,
     ) {
-        if days.as_ref().is_some_and(|days| days.is_empty()) {
+        if days.days.as_ref().is_some_and(|days| days.is_empty()) {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
-        let day = get_days(days);
-        let week = get_week_number(week.number, week.previous, week.year);
+        let day = get_days(days.days.clone());
+        let week = get_week_number(&days.week.number, &days.week.previous, &days.week.year);
 
         self.time_sheet_service
             .lock()
             .await
-            .set_time(hours, &day, &week, job, task)
+            .set_time(hours, &day, &week, &task.job, &task.name)
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
@@ -108,20 +100,18 @@ impl<'a> CommandClient<'a> {
 
     pub(crate) async fn clear(
         &mut self,
-        job: &str,
-        task: &str,
-        days: Option<Days>,
-        week: super::arguments::Week,
+        task: &super::arguments::Task,
+        days: &super::arguments::Days,
     ) {
-        if days.as_ref().is_some_and(|days| days.is_empty()) {
+        if days.days.as_ref().is_some_and(|days| days.is_empty()) {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
-        let week = get_week_number(week.number, week.previous, week.year);
+        let week = get_week_number(&days.week.number, &days.week.previous, &days.week.year);
         self.time_sheet_service
             .lock()
             .await
-            .clear(job, task, &get_days(days), &week)
+            .clear(&task.job, &task.name, &get_days(days.days.clone()), &week)
             .await
             .unwrap_or_else(|err| {
                 if let SetTimeError::Unknown(err) = err {
@@ -139,7 +129,7 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn delete(&mut self, line_number: &LineNumber, week: super::arguments::Week) {
-        let week = get_week_number(week.number, week.previous, week.year);
+        let week = get_week_number(&week.number, &week.previous, &week.year);
 
         self.repository
             .lock()
@@ -153,7 +143,7 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn submit(&mut self, week: super::arguments::Week) {
-        let week = get_week_number(week.number, week.previous, week.year);
+        let week = get_week_number(&week.number, &week.previous, &week.year);
 
         self.repository
             .lock()
@@ -166,15 +156,19 @@ impl<'a> CommandClient<'a> {
     }
 }
 
-fn get_week_number(week: Option<u8>, previous_week: Option<u8>, year: Option<i32>) -> WeekNumber {
+fn get_week_number(
+    week: &Option<u8>,
+    previous_week: &Option<u8>,
+    year: &Option<i32>,
+) -> WeekNumber {
     // NOTE: `week` and `previous_week` are assumed to be mutually exclusive (handled by Clap)
     if let Some(week) = previous_week {
-        nth_previous_week(week).unwrap_or_else(|err| {
+        nth_previous_week(*week).unwrap_or_else(|err| {
             exit_with_error!("{err}");
         })
     } else {
         let week = week.unwrap_or_else(|| WeekNumber::default().number);
-        WeekNumber::new_with_year_fallback(week, year)
+        WeekNumber::new_with_year_fallback(week, *year)
             .unwrap_or_else(|err| exit_with_error!("{err}"))
     }
 }

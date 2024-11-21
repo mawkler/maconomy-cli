@@ -1,10 +1,9 @@
 use super::day_parser::parse_days_of_week;
-use crate::domain::models::{day::Days, line_number::LineNumber};
+use crate::domain::models::{day, line_number::LineNumber};
 use clap::{Parser, Subcommand};
 use color_print::cformat;
 use std::str::FromStr;
 
-// TODO: do the same `flatten` thing with `task` + `job`
 #[derive(Parser, Debug)]
 pub(crate) struct Week {
     /// Week number (defaults to current week if omitted)
@@ -39,7 +38,7 @@ pub(crate) struct Task {
 }
 
 #[derive(Parser, Debug)]
-pub(crate) struct Day {
+pub(crate) struct Days {
     /// Day(s) of the week, for example "tuesday"
     ///
     /// Defaults to today if omitted
@@ -48,8 +47,8 @@ pub(crate) struct Day {
     /// "monday-tuesday, friday"
     ///
     /// Also accepts short day names like "mon", "tue", etc.
-    #[arg(long, short, value_parser = parse_days_of_week)]
-    pub(crate) day: Option<Days>,
+    #[arg(long = "day", short, value_parser = parse_days_of_week)]
+    pub(crate) days: Option<day::Days>,
 
     #[command(flatten)]
     pub(crate) week: Week,
@@ -106,7 +105,7 @@ pub enum Command {
         task: Task,
 
         #[command(flatten)]
-        day: Day,
+        days: Days,
     },
 
     /// Remove hours on day(s) for a given job and task
@@ -115,7 +114,7 @@ pub enum Command {
         task: Task,
 
         #[command(flatten)]
-        day: Day,
+        days: Days,
     },
 
     /// Submit time sheet for week

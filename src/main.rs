@@ -45,21 +45,9 @@ async fn main() -> anyhow::Result<()> {
     );
 
     match parse_arguments() {
-        Command::Get { week, format } => {
-            command_client
-                .get(week.number, week.previous, week.year, format)
-                .await
-        }
-        Command::Set { hours, task, day } => {
-            command_client
-                .set(hours, day.day, day.week, &task.job, &task.name)
-                .await
-        }
-        Command::Clear { task, day } => {
-            command_client
-                .clear(&task.job, &task.name, day.day, day.week)
-                .await
-        }
+        Command::Get { week, format } => command_client.get(week, format).await,
+        Command::Set { hours, task, days } => command_client.set(hours, &days, &task).await,
+        Command::Clear { task, days } => command_client.clear(&task, &days).await,
         Command::Submit { week } => command_client.submit(week).await,
         Command::Logout => command_client.logout().await,
         Command::Line(line) => match line {
