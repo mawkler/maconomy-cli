@@ -8,10 +8,10 @@ use std::str::FromStr;
 #[derive(Parser, Debug)]
 pub(crate) struct Week {
     /// Week number (defaults to current week if omitted)
-    #[arg(long = "week", short)]
+    #[arg(long = "week", short = 'w')]
     pub(crate) number: Option<u8>,
 
-    /// N:th previous week counted from current week (defaults to 1 if N isn't specified)
+    /// N:th previous week counted from current week (defaults to 1 if N is omitted)
     #[arg(
         long = "previous-week",
         short,
@@ -25,6 +25,34 @@ pub(crate) struct Week {
     /// Year (defaults to current year if omitted)
     #[arg(long, short, requires = "number")]
     pub(crate) year: Option<i32>,
+}
+
+#[derive(Parser, Debug)]
+pub(crate) struct Task {
+    /// Name of the job
+    #[arg(long, short)]
+    pub(crate) job: String,
+
+    /// Name of the task
+    #[arg(long = "task", short = 't')]
+    pub(crate) name: String,
+}
+
+#[derive(Parser, Debug)]
+pub(crate) struct Day {
+    /// Day(s) of the week, for example "tuesday"
+    ///
+    /// Defaults to today if omitted
+    ///
+    /// You can also specify multiple days, and/or a range of days, for example
+    /// "monday-tuesday, friday"
+    ///
+    /// Also accepts short day names like "mon", "tue", etc.
+    #[arg(long, short, value_parser = parse_days_of_week)]
+    pub(crate) day: Option<Days>,
+
+    #[command(flatten)]
+    pub(crate) week: Week,
 }
 
 #[derive(Debug, Clone, clap::ValueEnum)]
@@ -74,52 +102,20 @@ pub enum Command {
         /// Number of hours to set
         hours: f32,
 
-        /// Name of the job
-        #[arg(long, short)]
-        job: String,
-
-        /// Name of the task
-        #[arg(long, short)]
-        task: String,
-
-        /// Day(s) of the week, for example "tuesday"
-        ///
-        /// Defaults to today if omitted
-        ///
-        /// You can also specify multiple days, and/or a range of days, for example
-        /// "monday-tuesday, friday"
-        ///
-        /// Also accepts short day names like "mon", "tue", etc.
-        #[arg(long, short, value_parser = parse_days_of_week)]
-        day: Option<Days>,
+        #[command(flatten)]
+        task: Task,
 
         #[command(flatten)]
-        week: Week,
+        day: Day,
     },
 
     /// Remove hours on day(s) for a given job and task
     Clear {
-        /// Name of the job
-        #[arg(long, short)]
-        job: String,
-
-        /// Name of the task
-        #[arg(long, short)]
-        task: String,
-
-        /// Day(s) of the week, for example "tuesday"
-        ///
-        /// Defaults to today if omitted
-        ///
-        /// You can also specify multiple days, and/or a range of days, for example
-        /// "monday-tuesday, friday"
-        ///
-        /// Also accepts short day names like "mon", "tue", etc.
-        #[arg(long, short, value_parser = parse_days_of_week)]
-        day: Option<Days>,
+        #[command(flatten)]
+        task: Task,
 
         #[command(flatten)]
-        week: Week,
+        day: Day,
     },
 
     /// Submit time sheet for week

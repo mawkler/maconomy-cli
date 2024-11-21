@@ -50,19 +50,16 @@ async fn main() -> anyhow::Result<()> {
                 .get(week.number, week.previous, week.year, format)
                 .await
         }
-        Command::Set {
-            hours,
-            job,
-            task,
-            day,
-            week,
-        } => command_client.set(hours, day, week, &job, &task).await,
-        Command::Clear {
-            job,
-            task,
-            day,
-            week,
-        } => command_client.clear(&job, &task, day, week).await,
+        Command::Set { hours, task, day } => {
+            command_client
+                .set(hours, day.day, day.week, &task.job, &task.name)
+                .await
+        }
+        Command::Clear { task, day } => {
+            command_client
+                .clear(&task.job, &task.name, day.day, day.week)
+                .await
+        }
         Command::Submit { week } => command_client.submit(week).await,
         Command::Logout => command_client.logout().await,
         Command::Line(line) => match line {
