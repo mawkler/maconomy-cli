@@ -76,6 +76,8 @@ async fn set_hours() {
         "some task one",
         "--day",
         "monday",
+        "--week",
+        "42",
     ];
     let mut output = run(command, &mock_server.uri());
 
@@ -100,11 +102,13 @@ async fn set_hours_err() {
     // When
     let command = [
         "set",
+        "8",
         "--job",
         "doesn't exist",
         "--task",
         "some task one",
-        "8",
+        "--week",
+        "42",
     ];
     let mut output = run(command, &mock_server.uri());
 

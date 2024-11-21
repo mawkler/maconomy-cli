@@ -2,10 +2,10 @@ use anyhow::anyhow;
 use chrono::{Datelike, NaiveDate, Weekday};
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Default, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub(crate) struct WeekNumber {
-    number: u8,
-    year: i32,
+    pub(crate) number: u8,
+    pub(crate) year: i32,
 }
 
 impl WeekNumber {
@@ -15,29 +15,28 @@ impl WeekNumber {
         Ok(Self { number: week, year })
     }
 
-    fn new_with_year_fallback(week: u8, year: Option<i32>) -> anyhow::Result<Self> {
+    pub(crate) fn new_with_year_fallback(week: u8, year: Option<i32>) -> anyhow::Result<Self> {
         // Fall back to today's year
         let year = year.unwrap_or_else(|| chrono::Utc::now().year());
         WeekNumber::new(week, year)
     }
 
-    pub(crate) fn new_with_fallback(
-        week: Option<u8>,
-        year: Option<i32>,
-    ) -> anyhow::Result<WeekNumber> {
-        let week = week.unwrap_or_else(|| {
-            // Fall back to today's week
-            let this_week = chrono::Local::now().date_naive().iso_week().week();
-            this_week
-                .try_into()
-                .expect("Week numbers are always less than 255")
-        });
-
-        WeekNumber::new_with_year_fallback(week, year)
-    }
-
     pub(crate) fn first_day(&self) -> Option<NaiveDate> {
         first_day_of_week(self.number, self.year)
+    }
+}
+
+impl Default for WeekNumber {
+    fn default() -> Self {
+        // Fall back to today's week
+        let this_week = chrono::Local::now()
+            .date_naive()
+            .iso_week()
+            .week()
+            .try_into()
+            .expect("Week numbers are always less than 255");
+
+        WeekNumber::new_with_year_fallback(this_week, None).expect("Today's week should exist")
     }
 }
 

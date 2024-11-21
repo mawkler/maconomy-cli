@@ -4,6 +4,29 @@ use clap::{Parser, Subcommand};
 use color_print::cformat;
 use std::str::FromStr;
 
+// TODO: do the same `flatten` thing with `task` + `job`
+#[derive(Parser, Debug)]
+pub(crate) struct Week {
+    /// Week number (defaults to current week if omitted)
+    #[arg(long = "week", short)]
+    pub(crate) number: Option<u8>,
+
+    /// N:th previous week counted from current week (defaults to 1 if N isn't specified)
+    #[arg(
+        long = "previous-week",
+        short,
+        value_name = "N",
+        conflicts_with = "number",
+        default_missing_value = Some("1"),
+        num_args(0..=1),
+    )]
+    pub(crate) previous: Option<u8>,
+
+    /// Year (defaults to current year if omitted)
+    #[arg(long, short, requires = "number")]
+    pub(crate) year: Option<i32>,
+}
+
 #[derive(Debug, Clone, clap::ValueEnum)]
 pub(crate) enum Format {
     Json,
@@ -28,13 +51,8 @@ pub enum Line {
     Delete {
         line_number: LineNumber,
 
-        /// Week number (defaults to current week if omitted)
-        #[arg(long, short)]
-        week: Option<String>,
-
-        /// Year (defaults to current year if omitted)
-        #[arg(long, short, requires = "week")]
-        year: Option<i32>,
+        #[command(flatten)]
+        week: Week,
     },
 }
 
@@ -42,17 +60,12 @@ pub enum Line {
 pub enum Command {
     /// Get the time sheet for the current week
     Get {
-        /// Week number (defaults to current week if omitted)
-        #[arg(long, short)]
-        week: Option<String>,
-
-        /// Year (defaults to current year if omitted)
-        #[arg(long, short, requires = "week")]
-        year: Option<i32>,
-
         /// Output format
         #[arg(long, short, default_value = "table")]
         format: Format,
+
+        #[command(flatten)]
+        week: Week,
     },
 
     /// Set number of hours on day(s) for a given job and task
@@ -80,13 +93,8 @@ pub enum Command {
         #[arg(long, short, value_parser = parse_days_of_week)]
         day: Option<Days>,
 
-        /// Week number (defaults to current week if omitted)
-        #[arg(long, short)]
-        week: Option<String>,
-
-        /// Year (defaults to current year if omitted)
-        #[arg(long, short, requires = "week")]
-        year: Option<i32>,
+        #[command(flatten)]
+        week: Week,
     },
 
     /// Remove hours on day(s) for a given job and task
@@ -110,24 +118,14 @@ pub enum Command {
         #[arg(long, short, value_parser = parse_days_of_week)]
         day: Option<Days>,
 
-        /// Week number (defaults to current week if omitted)
-        #[arg(long, short)]
-        week: Option<String>,
-
-        /// Year (defaults to current year if omitted)
-        #[arg(long, short, requires = "week")]
-        year: Option<i32>,
+        #[command(flatten)]
+        week: Week,
     },
 
     /// Submit time sheet for week
     Submit {
-        /// Week number (defaults to current week if omitted)
-        #[arg(long, short)]
-        week: Option<String>,
-
-        /// Year (defaults to current year if omitted)
-        #[arg(long, short, requires = "week")]
-        year: Option<i32>,
+        #[command(flatten)]
+        week: Week,
     },
 
     /// Log out

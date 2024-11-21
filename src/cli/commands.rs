@@ -59,8 +59,14 @@ impl<'a> CommandClient<'a> {
         Ok(())
     }
 
-    pub(crate) async fn get(&self, week: Option<String>, year: Option<i32>, format: Format) {
-        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+    pub(crate) async fn get(
+        &self,
+        week: Option<u8>,
+        previous_week: Option<u8>,
+        year: Option<i32>,
+        format: Format,
+    ) {
+        let week = get_week_number(week, previous_week, year);
 
         match format {
             Format::Json => self.get_json(&week).await.context("JSON"),
@@ -75,8 +81,7 @@ impl<'a> CommandClient<'a> {
         &mut self,
         hours: f32,
         days: Option<Days>,
-        week: Option<String>,
-        year: Option<i32>,
+        week: super::arguments::Week,
         job: &str,
         task: &str,
     ) {
@@ -85,7 +90,7 @@ impl<'a> CommandClient<'a> {
         }
 
         let day = get_days(days);
-        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+        let week = get_week_number(week.number, week.previous, week.year);
 
         self.time_sheet_service
             .lock()
@@ -106,14 +111,13 @@ impl<'a> CommandClient<'a> {
         job: &str,
         task: &str,
         days: Option<Days>,
-        week: Option<String>,
-        year: Option<i32>,
+        week: super::arguments::Week,
     ) {
         if days.as_ref().is_some_and(|days| days.is_empty()) {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
-        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+        let week = get_week_number(week.number, week.previous, week.year);
         self.time_sheet_service
             .lock()
             .await
@@ -134,13 +138,8 @@ impl<'a> CommandClient<'a> {
         });
     }
 
-    pub(crate) async fn delete(
-        &mut self,
-        line_number: &LineNumber,
-        week: Option<String>,
-        year: Option<i32>,
-    ) {
-        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+    pub(crate) async fn delete(&mut self, line_number: &LineNumber, week: super::arguments::Week) {
+        let week = get_week_number(week.number, week.previous, week.year);
 
         self.repository
             .lock()
@@ -153,8 +152,8 @@ impl<'a> CommandClient<'a> {
             });
     }
 
-    pub(crate) async fn submit(&mut self, week: Option<String>, year: Option<i32>) {
-        let week = maybe_parse_week(week, year).unwrap_or_else(|err| exit_with_error!("{err}"));
+    pub(crate) async fn submit(&mut self, week: super::arguments::Week) {
+        let week = get_week_number(week.number, week.previous, week.year);
 
         self.repository
             .lock()
@@ -167,37 +166,36 @@ impl<'a> CommandClient<'a> {
     }
 }
 
+fn get_week_number(week: Option<u8>, previous_week: Option<u8>, year: Option<i32>) -> WeekNumber {
+    // NOTE: `week` and `previous_week` are assumed to be mutually exclusive (handled by Clap)
+    if let Some(week) = previous_week {
+        nth_previous_week(week).unwrap_or_else(|err| {
+            exit_with_error!("{err}");
+        })
+    } else {
+        let week = week.unwrap_or_else(|| WeekNumber::default().number);
+        WeekNumber::new_with_year_fallback(week, year)
+            .unwrap_or_else(|err| exit_with_error!("{err}"))
+    }
+}
+
 fn get_days(days: Option<Days>) -> Days {
     days.unwrap_or_else(|| {
         // Fall back to today's weekday
+        info!("Using today's as day");
         let today = chrono::Local::now().date_naive().weekday().into();
         HashSet::from([today])
     })
 }
 
-fn parse_week_number(week: String) -> anyhow::Result<u8> {
-    match week.trim().to_lowercase().as_str() {
-        "previous" => {
-            // TODO: make sure that the correct year gets set if we do `previous` on week 1
-            let today_week_last = chrono::Local::now().date_naive() - chrono::Duration::weeks(1);
-            let week = today_week_last
-                .iso_week()
-                .week()
-                .try_into()
-                .expect("Week numbers are always less than 255");
+fn nth_previous_week(n: u8) -> anyhow::Result<WeekNumber> {
+    let today_week_last = chrono::Local::now().date_naive() - chrono::Duration::weeks(n.into());
+    let week = today_week_last
+        .iso_week()
+        .week()
+        .try_into()
+        .expect("Week numbers are always less than 255");
+    let year = today_week_last.year();
 
-            info!("Using previous week number: {week}");
-            Ok(week)
-        }
-        number => number
-            .parse()
-            .with_context(|| format!("Invalid week number '{week}'")),
-    }
-}
-
-fn maybe_parse_week(week: Option<String>, year: Option<i32>) -> anyhow::Result<WeekNumber> {
-    let week = week.map(parse_week_number).transpose()?;
-    let week = WeekNumber::new_with_fallback(week, year)?;
-
-    Ok(week)
+    WeekNumber::new(week, year)
 }
