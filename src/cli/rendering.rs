@@ -61,18 +61,20 @@ impl<'a> From<&'a Line> for Row<'a> {
     }
 }
 
-fn gray_borders() -> BorderColor {
-    let gray = Color::parse(' '.fg_rgb::<85, 85, 85>().to_string()).clone();
+fn gray() -> Color {
+    Color::parse(' '.fg_rgb::<85, 85, 85>().to_string()).clone()
+}
 
+fn gray_borders() -> BorderColor {
     BorderColor::new()
-        .top(gray.clone())
-        .left(gray.clone())
-        .bottom(gray.clone())
-        .right(gray.clone())
-        .corner_bottom_right(gray.clone())
-        .corner_bottom_left(gray.clone())
-        .corner_top_left(gray.clone())
-        .corner_top_right(gray.clone())
+        .top(gray().clone())
+        .left(gray().clone())
+        .bottom(gray().clone())
+        .right(gray().clone())
+        .corner_bottom_right(gray().clone())
+        .corner_bottom_left(gray().clone())
+        .corner_top_left(gray().clone())
+        .corner_top_right(gray().clone())
 }
 
 impl Display for TimeSheet {
@@ -90,6 +92,7 @@ impl Display for TimeSheet {
                 Rows::first(),
             ))
             .with(Panel::footer(format!("Week {}", self.week_number)))
+            .with(Colorization::exact([gray()], Rows::last()))
             .with(gray_borders());
 
         write!(f, "{table}")
@@ -99,9 +102,10 @@ impl Display for TimeSheet {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::domain::models::{hours::Hours, time_sheet::Week};
 
     #[test]
-    fn display_hours_test() {
+    fn displays_hours() {
         let hours = [1.5, 0.25, 12.75, 0.0, 23.999, 10.1];
         let expected = ["1:30", "0:15", "12:45", "", "23:59", "10:06"];
 
@@ -109,5 +113,73 @@ mod test {
             let result = display_hours(&hours).to_string();
             assert_eq!(result, expected[i], "Failed at index {}", i);
         }
+    }
+
+    fn create_week(days: [u8; 7]) -> Week {
+        let days: Vec<f32> = days.into_iter().map(Into::into).collect();
+        Week {
+            monday: Hours(days[0]),
+            tuesday: Hours(days[1]),
+            wednesday: Hours(days[2]),
+            thursday: Hours(days[3]),
+            friday: Hours(days[4]),
+            saturday: Hours(days[5]),
+            sunday: Hours(days[6]),
+        }
+    }
+
+    #[test]
+    fn display_ansi_stripped_timesheet() {
+        let time_sheet = (TimeSheet {
+            lines: vec![
+                Line {
+                    job: "Job number one".to_string(),
+                    task: "Task number one".to_string(),
+                    week: create_week([8, 8, 0, 0, 0, 0, 0]),
+                },
+                Line {
+                    job: "job number two".to_string(),
+                    task: "task number two".to_string(),
+                    week: create_week([0, 0, 8, 8, 1, 1, 0]),
+                },
+                Line {
+                    job: "job number three".to_string(),
+                    task: "task number three".to_string(),
+                    week: create_week([0, 0, 0, 0, 7, 7, 8]),
+                },
+            ],
+            week_number: 47,
+        })
+        .to_string();
+
+        // Strip away ANSI colorsa for easier debugging
+        let ansi_stripped_time_sheet = anstream::adapter::strip_str(&time_sheet);
+        insta::assert_snapshot!(ansi_stripped_time_sheet.to_string());
+    }
+
+    #[test]
+    fn display_timesheet() {
+        let time_sheet = (TimeSheet {
+            lines: vec![
+                Line {
+                    job: "Job number one".to_string(),
+                    task: "Task number one".to_string(),
+                    week: create_week([8, 8, 0, 0, 0, 0, 0]),
+                },
+                Line {
+                    job: "job number two".to_string(),
+                    task: "task number two".to_string(),
+                    week: create_week([0, 0, 8, 8, 1, 1, 0]),
+                },
+                Line {
+                    job: "job number three".to_string(),
+                    task: "task number three".to_string(),
+                    week: create_week([0, 0, 0, 0, 7, 7, 8]),
+                },
+            ],
+            week_number: 47,
+        })
+        .to_string();
+        insta::assert_snapshot!(time_sheet.to_string());
     }
 }
