@@ -3,4 +3,4 @@ source: tests/integration/cli.rs
 expression: output
 snapshot_kind: text
 ---
-Job 'doesn't exist' not found
+Task 'some task four' not found

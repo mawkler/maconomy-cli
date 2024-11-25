@@ -9,7 +9,7 @@ const COMPANY_REGEX: &str = "[a-z0-9]+";
 const ROW_NUMBER_REGEX: &str = r"\d+";
 
 // Headers
-const MACONOMY_CONCURRENCY_CONTROL: &str = "Maconomy-Concurrency-Control";
+pub(crate) const MACONOMY_CONCURRENCY_CONTROL: &str = "Maconomy-Concurrency-Control";
 
 fn create_mock(
     path: &str,

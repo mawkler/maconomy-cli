@@ -2,11 +2,12 @@ use crate::helpers::{
     config::create_test_config,
     maconomy_mock::{
         mock_add_row, mock_get_instance, mock_get_table_rows, mock_job_number_search,
-        mock_set_hours, mock_set_week, mock_tasks_search,
+        mock_set_hours, mock_set_week, mock_tasks_search, MACONOMY_CONCURRENCY_CONTROL,
     },
 };
 use assert_cmd::Command;
 use std::{env, ffi};
+use uuid::Uuid;
 use wiremock::MockServer;
 
 fn run_json(
@@ -88,7 +89,58 @@ async fn set_hours() {
 
 #[tokio::main]
 #[test]
-async fn set_hours_err() {
+async fn set_hours_on_nonexistent_job() {
+    // Given
+    let mock_server = MockServer::start().await;
+    mock_get_instance(None).mount(&mock_server).await;
+    mock_get_table_rows(None).mount(&mock_server).await;
+    mock_set_week(None).mount(&mock_server).await;
+    mock_tasks_search(None).mount(&mock_server).await;
+    mock_add_row(None).mount(&mock_server).await;
+    create_test_config();
+
+    let response = wiremock::ResponseTemplate::new(200)
+        .append_header(MACONOMY_CONCURRENCY_CONTROL, Uuid::new_v4().to_string())
+        .set_body_json(serde_json::json!({
+          "panes": {
+            "filter": {
+              "meta": {
+                  "paneName": "filter",
+                  "rowCount": 25,
+                  "rowOffset": 0
+              },
+              "records": []
+            }
+          }
+        }));
+
+    mock_job_number_search(Some(response))
+        .mount(&mock_server)
+        .await;
+
+    // When
+    let command = [
+        "set",
+        "8",
+        "--job",
+        "doesn't exist",
+        "--task",
+        "some task one",
+        "--week",
+        "42",
+    ];
+    let mut output = run(command, &mock_server.uri());
+
+    // Then
+    output
+        .assert()
+        .stderr(assert_snapshot_predicate())
+        .failure();
+}
+
+#[tokio::main]
+#[test]
+async fn set_hours_on_nonexistent_task() {
     // Given
     let mock_server = MockServer::start().await;
     mock_get_instance(None).mount(&mock_server).await;
@@ -104,9 +156,9 @@ async fn set_hours_err() {
         "set",
         "8",
         "--job",
-        "doesn't exist",
+        "job one",
         "--task",
-        "some task one",
+        "some task four",
         "--week",
         "42",
     ];
