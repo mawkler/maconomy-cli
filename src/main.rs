@@ -8,7 +8,6 @@ use infrastructure::repositories::time_sheet_repository::TimeSheetRepository;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
 use std::rc::Rc;
 use tokio::sync::Mutex;
-
 mod cli;
 mod config;
 mod domain;

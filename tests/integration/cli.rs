@@ -10,6 +10,15 @@ use std::{env, ffi};
 use uuid::Uuid;
 use wiremock::MockServer;
 
+macro_rules! assert_snapshot_predicate {
+    () => {
+        predicates::function::function(move |output: &str| {
+            insta::assert_snapshot!(output);
+            true
+        })
+    };
+}
+
 fn run_json(
     args: impl IntoIterator<Item = impl AsRef<ffi::OsStr>>,
     server_url: &str,
@@ -134,7 +143,7 @@ async fn set_hours_on_nonexistent_job() {
     // Then
     output
         .assert()
-        .stderr(assert_snapshot_predicate())
+        .stderr(assert_snapshot_predicate!())
         .failure();
 }
 
@@ -167,6 +176,6 @@ async fn set_hours_on_nonexistent_task() {
     // Then
     output
         .assert()
-        .stderr(assert_snapshot_predicate())
+        .stderr(assert_snapshot_predicate!())
         .failure();
 }
