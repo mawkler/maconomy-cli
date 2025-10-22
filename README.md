@@ -55,18 +55,29 @@ Examples:
 
 You can also run `maconomy get --help`, `maconomy set --help`, etc. to see more info on how to use each command.
 
-## Installation
+## Running/installing
+
+Requires a [configuration](#configuration).
+
+### Option 1: running as a Nix flake
+
+Requires having [Nix](https://github.com/NixOS/nix) installed [with flakes enabled](https://wiki.nixos.org/wiki/Flakes#Setup).
+
+```sh
+nix run github:mawkler/maconomy-cli --
+```
+
+### Option 2: installing with Cargo
+
+Requires:
+
+- [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+- [Chromium](https://chromium.woolyss.com/download/) or Google Chrome (used in the current authentication implementation)
 
 ```sh
 git clone https://github.com/mawkler/maconomy-cli
 cargo install --path maconomy-cli/
 ```
-
-[Here's more information](https://doc.rust-lang.org/cargo/getting-started/installation.html) on how to install cargo (Rust's build-tool).
-
-### Dependencies
-
-- [Chromium](https://chromium.woolyss.com/download/) or Google Chrome (used in the current authentication implementation)
 
 ### Configuration
 
