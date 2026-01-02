@@ -8,7 +8,7 @@ use std::borrow::Cow;
 use std::fmt::Display;
 use tokio::{io::AsyncWriteExt, join};
 
-const COOKIE_NAME_PREFIX: &str = "Maconomy-";
+const COOKIE_NAME: &str = "Maconomy";
 const TIMEOUT: tokio::time::Duration = tokio::time::Duration::from_secs(300);
 const POLL_INTERVAL: tokio::time::Duration = tokio::time::Duration::from_secs(1);
 
@@ -211,7 +211,7 @@ async fn get_maconomy_cookie(page: &Page) -> Result<Option<Cookie>> {
         // Could there be more than one maconomy cookie?
         // TODO: fetch the name of the cookie from the Maconomy-Cookie header, and use that to make
         // sure that we get the right cookie
-        .find(|c| c.name.starts_with(COOKIE_NAME_PREFIX));
+        .find(|c| c.name.eq(COOKIE_NAME));
     Ok(cookies)
 }
 
