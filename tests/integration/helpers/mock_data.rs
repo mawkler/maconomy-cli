@@ -20,6 +20,7 @@ pub(crate) fn get_mock_table_rows_response() -> serde_json::Value {
                 "employeenamevar": "John Smith",
                 "datevar": "2024-10-24",
                 "weeknumbervar": 43,
+                "partvar": "",
                 "fixednumberday1var": 8,
                 "fixednumberday2var": 0,
                 "fixednumberday3var": 0,

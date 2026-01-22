@@ -1,3 +1,4 @@
+use crate::domain::models::week::WeekNumber;
 use super::hours::Hours;
 
 #[derive(Debug, serde::Serialize)]
@@ -32,23 +33,18 @@ impl Line {
 #[derive(Debug, serde::Serialize)]
 pub(crate) struct TimeSheet {
     pub(crate) lines: Vec<Line>,
-    pub(crate) week_number: u8,
+    pub(crate) week_number: WeekNumber,
 }
 
 impl TimeSheet {
-    pub(crate) fn new(lines: Vec<Line>, week_number: u8) -> Self {
+    pub(crate) fn new(lines: Vec<Line>, week_number: WeekNumber) -> Self {
         Self { lines, week_number }
     }
-}
-
-impl TimeSheet {
     pub(crate) fn find_line_nr(&self, job: &str, task: &str) -> Option<u8> {
-        let (row, _) = self
-            .lines
+        self.lines
             .iter()
             .enumerate()
-            .find(|(_, line)| line.has_job_and_task(job, task))?;
-
-        Some(row as u8)
+            .find(|(_, line)| line.has_job_and_task(job, task))
+            .map(|(row, _)| row as u8)
     }
 }

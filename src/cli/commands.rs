@@ -1,4 +1,4 @@
-use super::arguments::Format;
+use super::arguments::{Format, WeekAndPart, WeekPart};
 use crate::domain::models::day::Days;
 use crate::domain::models::line_number::LineNumber;
 use crate::domain::models::week::WeekNumber;
@@ -60,7 +60,7 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn get(&self, week: super::arguments::Week, format: Format) {
-        let week = get_week_number(&week.number, &week.previous, &week.year);
+        let week = get_week_number(week.week, week.year, week.previous);
 
         match format {
             Format::Json => self.get_json(&week).await.context("JSON"),
@@ -82,7 +82,7 @@ impl<'a> CommandClient<'a> {
         }
 
         let day = get_days(days.days.clone());
-        let week = get_week_number(&days.week.number, &days.week.previous, &days.week.year);
+        let week = get_week_number(days.week.week.clone(),days.week.year, days.week.previous );
 
         self.time_sheet_service
             .lock()
@@ -107,7 +107,7 @@ impl<'a> CommandClient<'a> {
             exit_with_error!("`--day` is set but no day was provided");
         }
 
-        let week = get_week_number(&days.week.number, &days.week.previous, &days.week.year);
+        let week = get_week_number(days.week.week.clone(), days.week.year, days.week.previous);
         self.time_sheet_service
             .lock()
             .await
@@ -129,7 +129,7 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn delete(&mut self, line_number: &LineNumber, week: super::arguments::Week) {
-        let week = get_week_number(&week.number, &week.previous, &week.year);
+        let week = get_week_number(week.week, week.year, week.previous,);
 
         self.repository
             .lock()
@@ -143,7 +143,7 @@ impl<'a> CommandClient<'a> {
     }
 
     pub(crate) async fn submit(&mut self, week: super::arguments::Week) {
-        let week = get_week_number(&week.number, &week.previous, &week.year);
+        let week = get_week_number(week.week, week.year,week.previous);
 
         self.repository
             .lock()
@@ -157,19 +157,24 @@ impl<'a> CommandClient<'a> {
 }
 
 fn get_week_number(
-    week: &Option<u8>,
-    previous_week: &Option<u8>,
-    year: &Option<i32>,
+    week: Option<WeekAndPart>,
+    year: Option<i32>,
+    previous_week: Option<u8>,
 ) -> WeekNumber {
     // NOTE: `week` and `previous_week` are assumed to be mutually exclusive (handled by Clap)
     if let Some(week) = previous_week {
-        nth_previous_week(*week).unwrap_or_else(|err| {
+        nth_previous_week(week).unwrap_or_else(|err| {
             exit_with_error!("{err}");
         })
     } else {
-        let week = week.unwrap_or_else(|| WeekNumber::default().number);
-        WeekNumber::new_with_year_fallback(week, *year)
-            .unwrap_or_else(|err| exit_with_error!("{err}"))
+        let y = year.unwrap_or_else(|| chrono::Utc::now().year());
+        week.map(|week_and_part| {
+            let number = week_and_part.number.ok_or_else(|| anyhow::anyhow!("Week number is required"))?;
+            let part = week_and_part.part.unwrap_or(WeekPart::WHOLE);
+            WeekNumber::new(number, part, y)
+        })
+        .unwrap_or_else(|| Ok(WeekNumber::default()))
+        .unwrap_or_else(|err| {exit_with_error!("{err}");})
     }
 }
 
@@ -183,13 +188,11 @@ fn get_days(days: Option<Days>) -> Days {
 }
 
 fn nth_previous_week(n: u8) -> anyhow::Result<WeekNumber> {
-    let today_week_last = chrono::Local::now().date_naive() - chrono::Duration::weeks(n.into());
-    let week = today_week_last
-        .iso_week()
-        .week()
-        .try_into()
-        .expect("Week numbers are always less than 255");
-    let year = today_week_last.year();
-
-    WeekNumber::new(week, year)
+    let mut week = WeekNumber::of(chrono::Local::now().date_naive());
+    
+    for _ in 0..n {
+        week = week.previous();
+    }
+    
+    Ok(week)
 }

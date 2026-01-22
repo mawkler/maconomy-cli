@@ -57,6 +57,7 @@ pub struct CardData {
     pub employeenamevar: String,
     pub datevar: String,
     pub weeknumbervar: u8,
+    pub partvar: String,
     pub fixednumberday1var: f32,
     pub fixednumberday2var: f32,
     pub fixednumberday3var: f32,

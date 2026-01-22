@@ -31,6 +31,7 @@ async fn main() -> anyhow::Result<()> {
     let auth_service = AuthService::new(login_url, cookie_path);
     let http_service = HttpService::new(&auth_service);
     let client = reqwest::Client::builder()
+        .connection_verbose(true)
         .cookie_store(true)
         .build()
         .context("Failed to create HTTP client")?;

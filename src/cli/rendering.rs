@@ -35,12 +35,12 @@ pub(crate) struct Row<'a> {
 }
 
 fn display_hours(hours: &f32) -> impl Display {
-    if let 0.0 = hours {
-        return "".to_string();
+    if (*hours - 0.0).abs() < f32::EPSILON {
+        return String::new();
     }
 
     let whole_hours = hours.trunc() as u32;
-    let minutes = ((*hours - whole_hours as f32) * 60.0).floor() as u32;
+    let minutes = ((hours - whole_hours as f32) * 60.0).floor() as u32;
 
     format!("{whole_hours}:{minutes:02}")
 }
@@ -62,19 +62,20 @@ impl<'a> From<&'a Line> for Row<'a> {
 }
 
 fn gray() -> Color {
-    Color::parse(' '.fg_rgb::<85, 85, 85>().to_string()).clone()
+    Color::parse(' '.fg_rgb::<85, 85, 85>().to_string())
 }
 
 fn gray_borders() -> BorderColor {
+    let gray_color = gray();
     BorderColor::new()
-        .top(gray().clone())
-        .left(gray().clone())
-        .bottom(gray().clone())
-        .right(gray().clone())
-        .corner_bottom_right(gray().clone())
-        .corner_bottom_left(gray().clone())
-        .corner_top_left(gray().clone())
-        .corner_top_right(gray().clone())
+        .top(gray_color.clone())
+        .left(gray_color.clone())
+        .bottom(gray_color.clone())
+        .right(gray_color.clone())
+        .corner_bottom_right(gray_color.clone())
+        .corner_bottom_left(gray_color.clone())
+        .corner_top_left(gray_color.clone())
+        .corner_top_right(gray_color)
 }
 
 impl Display for TimeSheet {
@@ -92,8 +93,9 @@ impl Display for TimeSheet {
                 Rows::first(),
             ))
             .with(Panel::footer(format!("Week {}", self.week_number)))
-            .with(Colorization::exact([gray()], Rows::last()))
-            .with(gray_borders());
+            .with(Colorization::exact([Color::BOLD], Rows::last()))
+            .with(Colorization::columns([Color::FG_WHITE,Color::FG_WHITE,Color::FG_WHITE,Color::FG_WHITE,Color::FG_WHITE,Color::FG_WHITE,Color::FG_WHITE,Color::FG_RED,Color::FG_RED]))
+           .with(gray_borders());
 
         write!(f, "{table}")
     }
@@ -102,7 +104,8 @@ impl Display for TimeSheet {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::domain::models::{hours::Hours, time_sheet::Week};
+    use crate::cli::arguments::WeekPart;
+    use crate::domain::models::{hours::Hours, time_sheet::Week, week::WeekNumber};
 
     #[test]
     fn displays_hours() {
@@ -148,7 +151,7 @@ mod test {
                     week: create_week([0, 0, 0, 0, 7, 7, 8]),
                 },
             ],
-            week_number: 47,
+            week_number: WeekNumber::new(47, WeekPart::WHOLE, 2024).unwrap(),
         })
         .to_string();
 
@@ -177,7 +180,7 @@ mod test {
                     week: create_week([0, 0, 0, 0, 7, 7, 8]),
                 },
             ],
-            week_number: 47,
+            week_number: WeekNumber::new(47, WeekPart::WHOLE, 2024).unwrap(),
         })
         .to_string();
         insta::assert_snapshot!(time_sheet.to_string());

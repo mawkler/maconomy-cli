@@ -29,9 +29,6 @@ impl TimeSheetService<'_> {
     pub(crate) fn new(repository: Rc<Mutex<TimeSheetRepository>>) -> TimeSheetService {
         TimeSheetService { repository }
     }
-}
-
-impl TimeSheetService<'_> {
     pub(crate) async fn clear(
         &mut self,
         job: &str,
@@ -52,8 +49,9 @@ impl TimeSheetService<'_> {
         task: &str,
     ) -> Result<(), SetTimeError> {
         let mut repository = self.repository.lock().await;
-        if let Err(err) = repository.set_time(hours, days, week, job, task).await {
-            return match err {
+        match repository.set_time(hours, days, week, job, task).await {
+            Ok(()) => Ok(()),
+            Err(err) => match err {
                 AddLineError::WeekUninitialized(AddRowError::Unknown(err)) => todo!("{}", err),
                 AddLineError::WeekUninitialized(AddRowError::WeekUninitialized) => {
                     eprintln!("Creating new timesheet...");
@@ -79,9 +77,7 @@ impl TimeSheetService<'_> {
                     warn!("{err}");
                     Err(anyhow::anyhow!(err).into())
                 }
-            };
-        };
-
-        Ok(())
+            },
+        }
     }
 }
