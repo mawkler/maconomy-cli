@@ -339,7 +339,7 @@ impl From<TableRecord> for Line {
             sunday: data.numberday7.into(),
         };
 
-        Line::new(data.jobnamevar, data.tasktextvar, week)
+        Line::new(data.jobnumber, data.jobnamevar, data.tasktextvar, week)
     }
 }
 

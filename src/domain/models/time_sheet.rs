@@ -14,14 +14,15 @@ pub(crate) struct Week {
 
 #[derive(Debug, serde::Serialize)]
 pub(crate) struct Line {
+    pub(crate) number: String,
     pub(crate) job: String,
     pub(crate) task: String,
     pub(crate) week: Week,
 }
 
 impl Line {
-    pub(crate) fn new(job: String, task: String, week: Week) -> Self {
-        Self { job, task, week }
+    pub(crate) fn new(number: String, job: String, task: String, week: Week) -> Self {
+        Self { number, job, task, week }
     }
 
     fn has_job_and_task(&self, job: &str, task: &str) -> bool {

@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use chrono::{Datelike, NaiveDate, Weekday, Duration};
+use chrono::{Datelike, NaiveDate, Weekday, Duration, Days};
 use std::fmt::Display;
 use std::convert::TryFrom;
 use crate::cli::arguments::{WeekPart, WeekAndPart};
@@ -61,6 +61,9 @@ impl WeekNumber {
 
     pub(crate) fn first_day(&self) -> Option<NaiveDate> {
         first_day_of_week(self.number,self.part, self.year)
+    }
+    pub(crate) fn last_day(&self) -> Option<NaiveDate> {
+        last_day_of_week(self.number,self.part, self.year)
     }
 
     pub(crate) fn previous(&self) -> Self {
@@ -148,6 +151,16 @@ fn first_day_of_week(week: u8, part: WeekPart, year: i32) -> Option<NaiveDate> {
     }
 }
 
+fn last_day_of_week(week: u8, part: WeekPart, year: i32) -> Option<NaiveDate> {
+    match part {
+        WeekPart::WHOLE => NaiveDate::from_isoywd_opt(year, week.into(), Weekday::Sun),
+        WeekPart::B => NaiveDate::from_isoywd_opt(year, week.into(), Weekday::Mon),
+        WeekPart::A => {
+            let sunday = NaiveDate::from_isoywd_opt(year, week.into(), Weekday::Sun)?;
+            NaiveDate::from_ymd_opt(sunday.year(), sunday.month(), 1)?.checked_sub_days(Days::new(1))
+        }
+    }
+}
 fn week_spans_new_month(week: u8, year: i32) -> bool {
     let monday = first_day_of_week(week, WeekPart::WHOLE, year)
         .expect("Week number should be valid");

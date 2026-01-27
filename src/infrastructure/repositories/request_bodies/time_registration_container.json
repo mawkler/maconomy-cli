@@ -6,8 +6,8 @@
         "periodendvar",
         "employeenamevar",
         "datevar",
-        "weeknumbervar",
         "partvar",
+        "weeknumbervar",
         "fixednumberday1var",
         "fixednumberday2var",
         "fixednumberday3var",
@@ -46,6 +46,7 @@
         "timeregistrationunit",
         "jobnamevar",
         "tasktextvar"
+
       ]
     }
   }

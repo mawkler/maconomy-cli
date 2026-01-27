@@ -1,6 +1,10 @@
 ---
 source: tests/integration/cli.rs
 expression: output
-snapshot_kind: text
 ---
-Job 'doesn't exist' not found
+Something went wrong when adding a new line to the time sheet: Could not get job number for job 'doesn't exist'
+
+Error stack:
+  - Could not get job number for job 'doesn't exist'
+  - Failed to send request
+  - Got response status '404 Not Found' and the following body from maconomy:
