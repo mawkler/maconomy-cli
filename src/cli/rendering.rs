@@ -193,28 +193,22 @@ fn should_be_red(date: NaiveDate) -> bool {
 
 /// Returns an array of Colors (FG_RED or FG_BLUE) based on whether each date should be red
 fn get_column_colors(dates: [NaiveDate; 7]) -> [Color; 7] {
-    [
-        if should_be_red(dates[0]) { Color::FG_RED } else { Color::FG_BLUE },
-        if should_be_red(dates[1]) { Color::FG_RED } else { Color::FG_BLUE },
-        if should_be_red(dates[2]) { Color::FG_RED } else { Color::FG_BLUE },
-        if should_be_red(dates[3]) { Color::FG_RED } else { Color::FG_BLUE },
-        if should_be_red(dates[4]) { Color::FG_RED } else { Color::FG_BLUE },
-        if should_be_red(dates[5]) { Color::FG_RED } else { Color::FG_BLUE },
-        if should_be_red(dates[6]) { Color::FG_RED } else { Color::FG_BLUE },
-    ]
+    dates
+        .iter()
+        .map(|&date| if should_be_red(date) { Color::FG_RED } else { Color::FG_BLUE })
+        .collect::<Vec<Color>>()
+        .try_into()
+        .expect("Iterator should produce exactly 7 colors")
 }
 
 /// Applies a Color (via OR) to each element in the array
 fn apply_color_to_array(colors: [Color; 7], color_to_apply: Color) -> [Color; 7] {
-    [
-        colors[0].clone() | color_to_apply.clone(),
-        colors[1].clone() | color_to_apply.clone(),
-        colors[2].clone() | color_to_apply.clone(),
-        colors[3].clone() | color_to_apply.clone(),
-        colors[4].clone() | color_to_apply.clone(),
-        colors[5].clone() | color_to_apply.clone(),
-        colors[6].clone() | color_to_apply.clone(),
-    ]
+    colors
+        .iter()
+        .map(|c| c.clone() | color_to_apply.clone())
+        .collect::<Vec<Color>>()
+        .try_into()
+        .expect("Iterator should produce exactly 7 colors")
 }
 
 /// Builds a color array by concatenating prefix colors with column colors
@@ -281,16 +275,8 @@ impl Display for TimeSheet {
             Rows::first().inverse().intersect(Columns::new(0..10))
         ))
             .with(Colorization::exact([Color::BOLD], Rows::last()))
-            //.with(Colorization::exact([Color::BOLD|Color::FG_BRIGHT_BLACK|Color::BG_BRIGHT_WHITE], (Rows::last()-1).intersect(Columns::new(0..11))))
             .with(Colorization::exact([Color::BOLD|Color::FG_BRIGHT_WHITE], (Rows::last()-1).intersect(Columns::new(0..11))))
-         //   .with(Highlight::color( Rows::last()-1,BorderColor::filled(Color::BG_BRIGHT_WHITE)))
-         /*   .with(
-                Modify::new(Columns::new(1))
-                    .with(Borders::new().vertical(Border::filled()))
-            );*/
-
-        // .with(gray_borders());
-;
+        ;
         write!(f, "{table}")
     }
 }
