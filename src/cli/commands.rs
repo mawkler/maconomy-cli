@@ -43,10 +43,10 @@ impl<'a> CommandClient<'a> {
         }
     }
 
-    pub(crate) async fn get_table(&self, week: &WeekNumber) -> anyhow::Result<()> {
+    pub(crate) async fn get_table(&self, week: &WeekNumber, full: bool) -> anyhow::Result<()> {
         let time_sheet = self.repository.lock().await.get_time_sheet(week).await?;
 
-        println!("{time_sheet}");
+        println!("{}", time_sheet.format_table(full));
         Ok(())
     }
 
@@ -59,12 +59,12 @@ impl<'a> CommandClient<'a> {
         Ok(())
     }
 
-    pub(crate) async fn get(&self, week: super::arguments::Week, format: Format) {
+    pub(crate) async fn get(&self, week: super::arguments::Week, format: Format, full: bool) {
         let week = get_week_number(week.week, week.year, week.previous);
 
         match format {
             Format::Json => self.get_json(&week).await.context("JSON"),
-            Format::Table => self.get_table(&week).await.context("table"),
+            Format::Table => self.get_table(&week, full).await.context("table"),
         }
         .unwrap_or_else(|err| {
             exit_with_error!("Failed to get time sheet as {}", error_stack_fmt(&err));

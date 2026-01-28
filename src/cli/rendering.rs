@@ -11,6 +11,20 @@ use tabled::settings::panel::HorizontalPanel;
 use tabled::settings::style::VerticalLine;
 use crate::domain::models::week::{WeekNumber};
 
+#[derive(Default)]
+pub(crate) struct SumWithApproval {
+    pub(crate) sum: f32,
+    pub(crate) is_approved: bool,
+}
+
+fn is_approved(approval_status: &str) -> bool {
+    // Check if approval_status indicates approval (non-empty and not "pending" or similar)
+    // Common approval statuses might be "approved", "Approved", etc.
+    !approval_status.is_empty() && 
+    !approval_status.eq_ignore_ascii_case("pending") &&
+    !approval_status.eq_ignore_ascii_case("draft")
+}
+
 #[derive(tabled::Tabled, Default)]
 pub(crate) struct LineRow<'a> {
     #[tabled(rename = "Job number")]
@@ -41,8 +55,8 @@ pub(crate) struct LineRow<'a> {
     #[tabled(display_with = "display_hours")]
     pub(crate) sunday: f32,
     #[tabled(rename = "Sum")]
-    #[tabled(display_with = "display_hours")]
-    pub(crate) sum: f32,
+    #[tabled(display_with = "display_sum_with_approval")]
+    pub(crate) sum: SumWithApproval,
 }
 #[derive(tabled::Tabled)]
 pub(crate) struct DateRow {
@@ -125,6 +139,25 @@ fn display_hours(hours: &f32) -> impl Display {
     format!("{whole_hours}:{minutes:02}")
 }
 
+fn display_sum_with_approval(sum_with_approval: &SumWithApproval) -> impl Display {
+    let hours_str = if (sum_with_approval.sum - 0.0).abs() < f32::EPSILON {
+        String::new()
+    } else {
+        let whole_hours = sum_with_approval.sum.trunc() as u32;
+        let minutes = ((sum_with_approval.sum - whole_hours as f32) * 60.0).floor() as u32;
+        format!("{whole_hours}:{minutes:02}")
+    };
+
+    if sum_with_approval.is_approved && !hours_str.is_empty() {
+        // Use green checkmark (✓) with ANSI color codes
+        // Format: right-aligned hours + space + checkmark
+        // This keeps numbers right-aligned while adding checkmark on the right
+        format!("{hours_str} \x1b[32m✓\x1b[0m")
+    } else {
+        hours_str
+    }
+}
+
 impl<'a> From<&'a Line> for LineRow<'a> {
     fn from(line: &'a Line) -> Self {
         let monday = line.week.monday.0;
@@ -134,7 +167,11 @@ impl<'a> From<&'a Line> for LineRow<'a> {
         let friday = line.week.friday.0;
         let saturday = line.week.saturday.0;
         let sunday = line.week.sunday.0;
-        let sum = monday + tuesday + wednesday + thursday + friday + saturday + sunday;
+        let sum_value = monday + tuesday + wednesday + thursday + friday + saturday + sunday;
+        let sum = SumWithApproval {
+            sum: sum_value,
+            is_approved: is_approved(&line.approval_status),
+        };
         
         LineRow {
             job_number: &line.number,
@@ -224,7 +261,14 @@ fn build_color_array(prefix: [Color; 3], column_colors: &[Color; 7]) -> [Color; 
 
 impl Display for TimeSheet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let line_rowz = self.time_rows();
+        // Default to showing all rows when using Display trait
+        write!(f, "{}", self.format_table(true))
+    }
+}
+
+impl TimeSheet {
+    pub(crate) fn format_table(&self, full: bool) -> String {
+        let line_rowz = self.time_rows(full);
 
         let date_row = self.date_row();
         
@@ -277,22 +321,32 @@ impl Display for TimeSheet {
             .with(Colorization::exact([Color::BOLD], Rows::last()))
             .with(Colorization::exact([Color::BOLD|Color::FG_BRIGHT_WHITE], (Rows::last()-1).intersect(Columns::new(0..11))))
         ;
-        write!(f, "{table}")
+        table.to_string()
     }
 }
 
 impl TimeSheet {
-    fn time_rows<'a>(&'a self) -> Chain<Map<IntoIter<LineRow<'a>>, fn(LineRow<'a>) -> Row<'a>>, Once<Row<'a>>> {
+    fn time_rows<'a>(&'a self, full: bool) -> Chain<Map<IntoIter<LineRow<'a>>, fn(LineRow<'a>) -> Row<'a>>, Once<Row<'a>>> {
         // Convert all Lines to LineRows for sum calculation
         let line_rows: Vec<LineRow<'a>> = self.lines.iter().map(LineRow::from).collect();
-        // Sum all weekday values across all rows
-        let monday_sum: f32 = line_rows.iter().map(|r| r.monday).sum();
-        let tuesday_sum: f32 = line_rows.iter().map(|r| r.tuesday).sum();
-        let wednesday_sum: f32 = line_rows.iter().map(|r| r.wednesday).sum();
-        let thursday_sum: f32 = line_rows.iter().map(|r| r.thursday).sum();
-        let friday_sum: f32 = line_rows.iter().map(|r| r.friday).sum();
-        let saturday_sum: f32 = line_rows.iter().map(|r| r.saturday).sum();
-        let sunday_sum: f32 = line_rows.iter().map(|r| r.sunday).sum();
+        
+        // Filter out rows with no hours if full is false
+        let filtered_line_rows: Vec<LineRow<'a>> = if full {
+            line_rows
+        } else {
+            line_rows.into_iter()
+                .filter(|row| (row.sum.sum - 0.0).abs() >= f32::EPSILON)
+                .collect()
+        };
+        
+        // Sum all weekday values across filtered rows
+        let monday_sum: f32 = filtered_line_rows.iter().map(|r| r.monday).sum();
+        let tuesday_sum: f32 = filtered_line_rows.iter().map(|r| r.tuesday).sum();
+        let wednesday_sum: f32 = filtered_line_rows.iter().map(|r| r.wednesday).sum();
+        let thursday_sum: f32 = filtered_line_rows.iter().map(|r| r.thursday).sum();
+        let friday_sum: f32 = filtered_line_rows.iter().map(|r| r.friday).sum();
+        let saturday_sum: f32 = filtered_line_rows.iter().map(|r| r.saturday).sum();
+        let sunday_sum: f32 = filtered_line_rows.iter().map(|r| r.sunday).sum();
         let total_sum = monday_sum + tuesday_sum + wednesday_sum + thursday_sum + friday_sum + saturday_sum + sunday_sum;
 
         let sum_row = LineRow {
@@ -306,10 +360,13 @@ impl TimeSheet {
             friday: friday_sum,
             saturday: saturday_sum,
             sunday: sunday_sum,
-            sum: total_sum,
+            sum: SumWithApproval {
+                sum: total_sum,
+                is_approved: false, // Sum row is never approved
+            },
         };
         // Convert to Vec<Row> and chain the rows iterator with the sum row and date row
-        let line_rowz = line_rows.into_iter()
+        let line_rowz = filtered_line_rows.into_iter()
             .map(Row::LineRow as fn(LineRow<'a>) -> Row<'a>)
             .chain(iter::once(Row::LineRow(sum_row)));
         let chain = line_rowz;
@@ -380,18 +437,21 @@ mod test {
                     job: "Job number one".to_string(),
                     task: "Task number one".to_string(),
                     week: create_week([8, 8, 0, 0, 0, 0, 0]),
+                    approval_status: "".to_string(),
                 },
                 Line {
                     number: "two".to_string(),
                     job: "job number two".to_string(),
                     task: "task number two".to_string(),
                     week: create_week([0, 0, 8, 8, 1, 1, 0]),
+                    approval_status: "".to_string(),
                 },
                 Line {
                     number: "three".to_string(),
                     job: "job number three".to_string(),
                     task: "task number three".to_string(),
                     week: create_week([0, 0, 0, 0, 7, 7, 8]),
+                    approval_status: "".to_string(),
                 },
             ],
             week_number: WeekNumber::new(47, WeekPart::WHOLE, 2024).unwrap(),
@@ -412,23 +472,156 @@ mod test {
                     job: "Job number one".to_string(),
                     task: "Task number one".to_string(),
                     week: create_week([8, 8, 0, 0, 0, 0, 0]),
+                    approval_status: "approved".to_string(),
                 },
                 Line {
                     number: "two".to_string(),
                     job: "job number two".to_string(),
                     task: "task number two".to_string(),
                     week: create_week([0, 0, 8, 8, 1, 1, 0]),
+                    approval_status: "".to_string(),
                 },
                 Line {
                     number: "three".to_string(),
                     job: "job number three".to_string(),
                     task: "task number three".to_string(),
                     week: create_week([0, 0, 0, 0, 7, 7, 8]),
+                    approval_status: "Approved".to_string(),
                 },
             ],
             week_number: WeekNumber::new(47, WeekPart::WHOLE, 2024).unwrap(),
         })
         .to_string();
         insta::assert_snapshot!(time_sheet.to_string());
+    }
+
+    #[test]
+    fn format_table_hides_rows_with_no_hours_when_full_is_false() {
+        let time_sheet = TimeSheet {
+            lines: vec![
+                Line {
+                    number: "one".to_string(),
+                    job: "Job with hours".to_string(),
+                    task: "Task with hours".to_string(),
+                    week: create_week([8, 8, 0, 0, 0, 0, 0]),
+                    approval_status: "".to_string(),
+                },
+                Line {
+                    number: "two".to_string(),
+                    job: "Job with no hours".to_string(),
+                    task: "Task with no hours".to_string(),
+                    week: create_week([0, 0, 0, 0, 0, 0, 0]),
+                    approval_status: "".to_string(),
+                },
+                Line {
+                    number: "three".to_string(),
+                    job: "Another job with hours".to_string(),
+                    task: "Another task with hours".to_string(),
+                    week: create_week([0, 0, 8, 8, 0, 0, 0]),
+                    approval_status: "".to_string(),
+                },
+            ],
+            week_number: WeekNumber::new(47, WeekPart::WHOLE, 2024).unwrap(),
+        };
+
+        let output = time_sheet.format_table(false);
+        let ansi_stripped = anstream::adapter::strip_str(&output).to_string();
+        
+        // Should not contain the row with no hours
+        assert!(!ansi_stripped.contains("Job with no hours"));
+        assert!(!ansi_stripped.contains("Task with no hours"));
+        
+        // Should contain rows with hours
+        assert!(ansi_stripped.contains("Job with hours"));
+        assert!(ansi_stripped.contains("Another job with hours"));
+        
+        // Should contain the sum row
+        assert!(ansi_stripped.contains("Sum"));
+        
+        insta::assert_snapshot!(ansi_stripped);
+    }
+
+    #[test]
+    fn format_table_shows_all_rows_when_full_is_true() {
+        let time_sheet = TimeSheet {
+            lines: vec![
+                Line {
+                    number: "one".to_string(),
+                    job: "Job with hours".to_string(),
+                    task: "Task with hours".to_string(),
+                    week: create_week([8, 8, 0, 0, 0, 0, 0]),
+                    approval_status: "".to_string(),
+                },
+                Line {
+                    number: "two".to_string(),
+                    job: "Job with no hours".to_string(),
+                    task: "Task with no hours".to_string(),
+                    week: create_week([0, 0, 0, 0, 0, 0, 0]),
+                    approval_status: "".to_string(),
+                },
+                Line {
+                    number: "three".to_string(),
+                    job: "Another job with hours".to_string(),
+                    task: "Another task with hours".to_string(),
+                    week: create_week([0, 0, 8, 8, 0, 0, 0]),
+                    approval_status: "".to_string(),
+                },
+            ],
+            week_number: WeekNumber::new(47, WeekPart::WHOLE, 2024).unwrap(),
+        };
+
+        let output = time_sheet.format_table(true);
+        let ansi_stripped = anstream::adapter::strip_str(&output).to_string();
+        
+        // Should contain all rows including the one with no hours
+        assert!(ansi_stripped.contains("Job with hours"));
+        assert!(ansi_stripped.contains("Job with no hours"));
+        assert!(ansi_stripped.contains("Task with no hours"));
+        assert!(ansi_stripped.contains("Another job with hours"));
+        
+        // Should contain the sum row
+        assert!(ansi_stripped.contains("Sum"));
+        
+        insta::assert_snapshot!(ansi_stripped);
+    }
+
+    #[test]
+    fn format_table_sum_row_reflects_filtered_rows() {
+        let time_sheet = TimeSheet {
+            lines: vec![
+                Line {
+                    number: "one".to_string(),
+                    job: "Job one".to_string(),
+                    task: "Task one".to_string(),
+                    week: create_week([8, 8, 0, 0, 0, 0, 0]),
+                    approval_status: "".to_string(),
+                },
+                Line {
+                    number: "two".to_string(),
+                    job: "Job two".to_string(),
+                    task: "Task two".to_string(),
+                    week: create_week([0, 0, 0, 0, 0, 0, 0]), // No hours
+                    approval_status: "".to_string(),
+                },
+                Line {
+                    number: "three".to_string(),
+                    job: "Job three".to_string(),
+                    task: "Task three".to_string(),
+                    week: create_week([0, 0, 4, 4, 0, 0, 0]),
+                    approval_status: "".to_string(),
+                },
+            ],
+            week_number: WeekNumber::new(47, WeekPart::WHOLE, 2024).unwrap(),
+        };
+
+        // When full=false, sum should only include rows with hours (16 + 8 = 24)
+        let output_filtered = time_sheet.format_table(false);
+        let ansi_stripped_filtered = anstream::adapter::strip_str(&output_filtered).to_string();
+        assert!(ansi_stripped_filtered.contains("24:00")); // 16 + 8 hours
+        
+        // When full=true, sum should include all rows (16 + 0 + 8 = 24, same in this case)
+        let output_full = time_sheet.format_table(true);
+        let ansi_stripped_full = anstream::adapter::strip_str(&output_full).to_string();
+        assert!(ansi_stripped_full.contains("24:00"));
     }
 }

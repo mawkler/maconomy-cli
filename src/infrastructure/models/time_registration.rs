@@ -115,6 +115,8 @@ pub struct TableData {
     pub numberday7: f32,
     pub entrytext: String,
     pub taskname: String,
+    #[serde(default)]
+    pub approvalstatus: String,
     pub instancekey: String,
     pub timeregistrationunit: String,
     pub jobnamevar: String,

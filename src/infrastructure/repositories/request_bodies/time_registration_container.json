@@ -45,7 +45,8 @@
         "taskname",
         "timeregistrationunit",
         "jobnamevar",
-        "tasktextvar"
+        "tasktextvar",
+        "approvalstatus"
 
       ]
     }

@@ -117,6 +117,10 @@ pub enum Command {
         #[arg(long, short, default_value = "table")]
         format: Format,
 
+        /// Show all rows, including those with no hours reported
+        #[arg(long)]
+        full: bool,
+
         #[command(flatten)]
         week: Week,
     },

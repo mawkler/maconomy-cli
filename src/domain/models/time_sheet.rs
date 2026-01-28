@@ -18,11 +18,12 @@ pub(crate) struct Line {
     pub(crate) job: String,
     pub(crate) task: String,
     pub(crate) week: Week,
+    pub(crate) approval_status: String,
 }
 
 impl Line {
-    pub(crate) fn new(number: String, job: String, task: String, week: Week) -> Self {
-        Self { number, job, task, week }
+    pub(crate) fn new(number: String, job: String, task: String, week: Week, approval_status: String) -> Self {
+        Self { number, job, task, week ,approval_status}
     }
 
     fn has_job_and_task(&self, job: &str, task: &str) -> bool {
