@@ -166,7 +166,19 @@ impl TimeSheetRepository<'_> {
             .get_time_sheet(week)
             .await
             .context("Failed to get time sheet")?;
-
+        
+        let time_sheet = if time_sheet.create_action.is_some() {
+            self.create_new_timesheet()
+                .await
+                .context("Failed to create new timesheet")?;
+            self.get_time_sheet(week)
+                .await
+                .context("Failed to get time sheet after creation")?
+        } else {
+            debug!("No create_action, timesheet should be populated");
+            time_sheet
+        };
+      
         let line_number = self
             .get_or_create_line_number(job, task, &time_sheet)
             .await?;
@@ -366,6 +378,7 @@ impl TryFrom<TimeRegistration> for TimeSheet {
             .year();
         let week = WeekNumber::new(w, part, year)
             .context("Week number should be valid from time registration")?;
-        Ok(Self::new(lines, week))
+        let create_action = time_registration.panes.card.links.get("action:createtimesheet").map(|l| l.href.clone());
+        Ok(Self::new(lines, week, create_action))
     }
 }

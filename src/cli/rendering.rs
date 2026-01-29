@@ -431,6 +431,7 @@ mod test {
     #[test]
     fn display_ansi_stripped_timesheet() {
         let time_sheet = (TimeSheet {
+            create_action: None,
             lines: vec![
                 Line {
                     number: "one".to_string(),
@@ -466,6 +467,7 @@ mod test {
     #[test]
     fn display_timesheet() {
         let time_sheet = (TimeSheet {
+            create_action: None,
             lines: vec![
                 Line {
                     number: "one".to_string(),
@@ -498,6 +500,7 @@ mod test {
     #[test]
     fn format_table_hides_rows_with_no_hours_when_full_is_false() {
         let time_sheet = TimeSheet {
+            create_action: None,
             lines: vec![
                 Line {
                     number: "one".to_string(),
@@ -544,6 +547,7 @@ mod test {
     #[test]
     fn format_table_shows_all_rows_when_full_is_true() {
         let time_sheet = TimeSheet {
+            create_action: None,
             lines: vec![
                 Line {
                     number: "one".to_string(),
@@ -588,6 +592,7 @@ mod test {
     #[test]
     fn format_table_sum_row_reflects_filtered_rows() {
         let time_sheet = TimeSheet {
+            create_action: None,
             lines: vec![
                 Line {
                     number: "one".to_string(),

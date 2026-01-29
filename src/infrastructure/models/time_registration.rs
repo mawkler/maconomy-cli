@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -31,7 +32,16 @@ pub struct Panes {
 #[serde(rename_all = "camelCase")]
 pub struct Card {
     pub meta: CardMeta,
+    #[serde(default)]
+    pub links: HashMap<String,Link>,
     pub records: Vec<CardRecord>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Link {
+    pub rel: String,
+    pub href: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
