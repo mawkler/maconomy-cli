@@ -1,7 +1,6 @@
 ---
 source: tests/integration/cli.rs
 expression: output
-snapshot_kind: text
 ---
 {
   "lines": [
@@ -32,5 +31,9 @@ snapshot_kind: text
       }
     }
   ],
-  "week_number": 43
+  "week_number": {
+    "number": 43,
+    "part": "",
+    "year": 2024
+  }
 }

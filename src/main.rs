@@ -31,6 +31,7 @@ async fn main() -> anyhow::Result<()> {
     let auth_service = AuthService::new(login_url, cookie_path);
     let http_service = HttpService::new(&auth_service);
     let client = reqwest::Client::builder()
+        .connection_verbose(true)
         .cookie_store(true)
         .build()
         .context("Failed to create HTTP client")?;
@@ -45,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     match parse_arguments() {
-        Command::Get { week, format } => command_client.get(week, format).await,
+        Command::Get { week, format, full } => command_client.get(week, format, full).await,
         Command::Set { hours, task, days } => command_client.set(hours, &days, &task).await,
         Command::Clear { task, days } => command_client.clear(&task, &days).await,
         Command::Submit { week } => command_client.submit(week).await,

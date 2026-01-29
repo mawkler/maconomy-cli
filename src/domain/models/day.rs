@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, collections::HashSet, fmt::Display, str::FromStr};
+use std::{collections::HashSet, fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum Day {
@@ -17,32 +17,33 @@ impl FromStr for Day {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let day = match s.to_lowercase().borrow() {
-            "monday" => Day::Monday,
-            "tuesday" => Day::Tuesday,
-            "wednesday" => Day::Wednesday,
-            "thursday" => Day::Thursday,
-            "friday" => Day::Friday,
-            "saturday" => Day::Saturday,
-            "sunday" => Day::Sunday,
+        match s.to_lowercase().as_str() {
+            "monday" => Ok(Day::Monday),
+            "tuesday" => Ok(Day::Tuesday),
+            "wednesday" => Ok(Day::Wednesday),
+            "thursday" => Ok(Day::Thursday),
+            "friday" => Ok(Day::Friday),
+            "saturday" => Ok(Day::Saturday),
+            "sunday" => Ok(Day::Sunday),
             _ => anyhow::bail!("Unrecognized day {s}"),
-        };
-        Ok(day)
+        }
     }
 }
 
-impl From<u8> for Day {
-    fn from(day: u8) -> Self {
-        let week = [
-            Day::Monday,
-            Day::Tuesday,
-            Day::Wednesday,
-            Day::Thursday,
-            Day::Friday,
-            Day::Saturday,
-            Day::Sunday,
-        ];
-        *week.get(day as usize - 1).expect("Invalid day")
+impl TryFrom<u8> for Day {
+    type Error = &'static str;
+
+    fn try_from(day: u8) -> Result<Self, Self::Error> {
+        match day {
+            1 => Ok(Day::Monday),
+            2 => Ok(Day::Tuesday),
+            3 => Ok(Day::Wednesday),
+            4 => Ok(Day::Thursday),
+            5 => Ok(Day::Friday),
+            6 => Ok(Day::Saturday),
+            7 => Ok(Day::Sunday),
+            _ => Err("Day must be between 1 and 7"),
+        }
     }
 }
 

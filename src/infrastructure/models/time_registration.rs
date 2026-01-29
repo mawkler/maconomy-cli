@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -31,7 +32,16 @@ pub struct Panes {
 #[serde(rename_all = "camelCase")]
 pub struct Card {
     pub meta: CardMeta,
+    #[serde(default)]
+    pub links: HashMap<String,Link>,
     pub records: Vec<CardRecord>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Link {
+    pub rel: String,
+    pub href: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -57,6 +67,7 @@ pub struct CardData {
     pub employeenamevar: String,
     pub datevar: String,
     pub weeknumbervar: u8,
+    pub partvar: String,
     pub fixednumberday1var: f32,
     pub fixednumberday2var: f32,
     pub fixednumberday3var: f32,
@@ -114,6 +125,8 @@ pub struct TableData {
     pub numberday7: f32,
     pub entrytext: String,
     pub taskname: String,
+    #[serde(default)]
+    pub approvalstatus: String,
     pub instancekey: String,
     pub timeregistrationunit: String,
     pub jobnamevar: String,

@@ -1,6 +1,10 @@
 ---
 source: tests/integration/cli.rs
 expression: output
-snapshot_kind: text
 ---
-Task 'some task four' not found
+Something went wrong when adding a new line to the time sheet: Could not get job number for job 'job one'
+
+Error stack:
+  - Could not get job number for job 'job one'
+  - Failed to send request
+  - Got response status '404 Not Found' and the following body from maconomy:

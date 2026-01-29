@@ -129,6 +129,7 @@ impl MaconomyHttpClient<'_> {
         &self,
         container_instance: &ContainerInstance,
     ) -> Result<ConcurrencyControl> {
+        debug!("Creating timesheet...");
         let instance_url = self.get_container_instance_url(&container_instance.id.0);
         let url = format!("{instance_url}/data/panes/card/0/action;name=createtimesheet");
         let concurrency_control = &container_instance.concurrency_control.0;
@@ -228,6 +229,7 @@ impl MaconomyHttpClient<'_> {
 
     pub async fn get_job_number_from_name(&self, job_name: &str) -> Result<Option<String>> {
         let (url, company) = (&self.url, &self.company_name);
+      // https://me73379-maconomy.deltekfirst.com/maconomy-api/containers/me73379/timeregistration/instances/3bc4d944-e663-4b7b-ad96-2531180e3a7f/data/panes/table/init/search;foreignkey=notblockedjobnumber_jobheader
         let url = format!(
         "{url}/containers/{company}/timeregistration/search/table;foreignkey=notblockedjobnumber_jobheader"
     );

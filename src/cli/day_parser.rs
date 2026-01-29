@@ -1,4 +1,5 @@
 use crate::domain::models::day::{Day, Days};
+use std::convert::TryFrom;
 use anyhow::{anyhow, Context};
 use nom::{
     branch::alt,
@@ -87,7 +88,9 @@ fn days_in_range((start, end): Range) -> Option<Vec<Day>> {
     let (start, end) = (start as u8, end as u8);
 
     if start < end {
-        Some((start..=end).map(Day::from).collect())
+        (start..=end)
+            .map(|d| Day::try_from(d).ok())
+            .collect()
     } else {
         None
     }
