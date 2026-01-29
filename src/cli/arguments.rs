@@ -169,6 +169,7 @@ pub enum Command {
     arg_required_else_help = true,
     after_help = cformat!("<bold,underline>Examples:</bold,underline>\
     \n  maconomy get \
+    \n  maconomy get --full\
     \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' \
     \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' --day 'mon-wed, fri' --week 46 \
     \n  maconomy set 8 --job '<<job name>>' --task '<<task name>>' --day mo --previous-week 2 \
