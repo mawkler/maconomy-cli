@@ -3,3 +3,4 @@
 .direnv/
 sso_login/node_modules/
 maconomy_cookie
+.direnv/

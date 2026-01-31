@@ -28,13 +28,6 @@ fn run(
     cmd
 }
 
-fn assert_snapshot_predicate() -> predicates::function::FnPredicate<impl Fn(&str) -> bool, str> {
-    predicates::function::function(move |output: &str| {
-        insta::assert_snapshot!(output);
-        true
-    })
-}
-
 #[tokio::main]
 #[test]
 async fn get_timesheet() {
@@ -134,7 +127,10 @@ async fn set_hours_on_nonexistent_job() {
     // Then
     output
         .assert()
-        .stderr(assert_snapshot_predicate())
+        .stderr(predicates::function::function(move |output: &str| {
+            insta::assert_snapshot!(output);
+            true
+        }))
         .failure();
 }
 
@@ -167,6 +163,9 @@ async fn set_hours_on_nonexistent_task() {
     // Then
     output
         .assert()
-        .stderr(assert_snapshot_predicate())
+        .stderr(predicates::function::function(move |output: &str| {
+            insta::assert_snapshot!(output);
+            true
+        }))
         .failure();
 }
