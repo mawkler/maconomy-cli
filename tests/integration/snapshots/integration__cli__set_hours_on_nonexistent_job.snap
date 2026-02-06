@@ -1,5 +1,0 @@
----
-source: tests/integration/cli.rs
-expression: output
----
-Job 'doesn't exist' not found

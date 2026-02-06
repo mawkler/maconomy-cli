@@ -1,7 +1,6 @@
 ---
 source: src/cli/rendering.rs
 expression: ansi_stripped_time_sheet.to_string()
-snapshot_kind: text
 ---
 ╭───────────────────────────────────────────────────────────────────────────────╮
 │ Job name          Task name          Mon   Tue   Wed   Thu   Fri   Sat   Sun  │

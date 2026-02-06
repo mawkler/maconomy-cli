@@ -1,7 +1,6 @@
 ---
-source: tests/integration/cli.rs
+source: tests/end_to_end/cli.rs
 expression: output
-snapshot_kind: text
 ---
 {
   "lines": [
