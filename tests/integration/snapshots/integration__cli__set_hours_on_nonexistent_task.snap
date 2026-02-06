@@ -1,0 +1,5 @@
+---
+source: tests/integration/cli.rs
+expression: output
+---
+Task 'some task four' not found

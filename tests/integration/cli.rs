@@ -36,10 +36,13 @@ async fn get_timesheet() {
     mock_get_instance(None).mount(&mock_server).await;
     mock_get_table_rows(None).mount(&mock_server).await;
     mock_set_week(None).mount(&mock_server).await;
-    create_test_config();
+    let config = create_test_config(&mock_server.uri());
 
     // When
-    let output = run_json(["get", "--format", "json"], &mock_server.uri());
+    let output = run_json(
+        ["--config", &config, "get", "--format", "json"],
+        &mock_server.uri(),
+    );
 
     // Then
     insta::assert_json_snapshot!(output);
@@ -58,10 +61,12 @@ async fn set_hours() {
     // mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;
     mock_set_hours(None).mount(&mock_server).await;
-    create_test_config();
+    let config = create_test_config(&mock_server.uri());
 
     // When
     let command = [
+        "--config",
+        &config,
         "set",
         "8",
         "--job",
@@ -90,7 +95,7 @@ async fn set_hours_on_nonexistent_job() {
     mock_set_week(None).mount(&mock_server).await;
     mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;
-    create_test_config();
+    let config = create_test_config(&mock_server.uri());
 
     let response = wiremock::ResponseTemplate::new(200)
         .append_header(MACONOMY_CONCURRENCY_CONTROL, Uuid::new_v4().to_string())
@@ -113,6 +118,8 @@ async fn set_hours_on_nonexistent_job() {
 
     // When
     let command = [
+        "--config",
+        &config,
         "set",
         "8",
         "--job",
@@ -145,10 +152,12 @@ async fn set_hours_on_nonexistent_task() {
     mock_job_number_search(None).mount(&mock_server).await;
     mock_tasks_search(None).mount(&mock_server).await;
     mock_add_row(None).mount(&mock_server).await;
-    create_test_config();
+    let config = create_test_config(&mock_server.uri());
 
     // When
     let command = [
+        "--config",
+        &config,
         "set",
         "8",
         "--job",

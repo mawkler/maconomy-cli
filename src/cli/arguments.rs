@@ -148,8 +148,8 @@ pub enum Command {
 )]
 
 pub struct Args {
-    /// Path to a configuration file
-    #[arg(short, long, value_name = "FILE")]
+    /// TOML formatted configuration content
+    #[arg(short, long, value_name = "configuration")]
     pub config: Option<String>,
 
     #[command(subcommand)]

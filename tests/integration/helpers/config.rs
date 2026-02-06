@@ -1,15 +1,12 @@
-const CONFIG: &[(&str, &str)] = &[
-    ("COMPANY_ID", "company123"),
-    ("AUTHENTICATION__SSO__LOGIN_URL", "https://some.website.com"),
-    (
-        "AUTHENTICATION__SSO__COOKIE_PATH",
-        "tests/integration/helpers/integration_test_maconomy_cookie",
-    ),
-    // `MACONOMY_URL` is set by the tests (from mock URL)
-];
-
-pub(crate) fn create_test_config() {
-    for (key, value) in CONFIG {
-        std::env::set_var(format!("MACONOMY__{key}"), value);
-    }
+pub(crate) fn create_test_config(uri: &str) -> String {
+    format!(
+        r#"
+            maconomy_url = "{}"
+            company_id = "company123"
+            [authentication.sso]
+            login_url = "https://some.website.com"
+            cookie_path = "tests/integration/helpers/integration_test_maconomy_cookie"
+        "#,
+        uri
+    )
 }

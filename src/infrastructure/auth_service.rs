@@ -164,7 +164,7 @@ impl AuthService {
         Ok(())
     }
 
-    fn get_cookie_path(&self) -> Result<Cow<str>> {
+    fn get_cookie_path(&self) -> Result<Cow<'_, str>> {
         shellexpand::full(&self.cookie_path).context("Failed to expand cookie path")
     }
 

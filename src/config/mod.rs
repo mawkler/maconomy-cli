@@ -8,12 +8,10 @@ const DEFAULT_PATH: &str = "~/.config/maconomy-cli/config";
 pub struct Configuration(Config);
 
 impl Configuration {
-    pub fn new(path: Option<String>) -> Self {
-        let config_path = path.unwrap_or_else(|| shellexpand::tilde(DEFAULT_PATH).to_string());
-        dbg!(&config_path);
-        let config = Config::builder()
+    pub fn new(config_str: Option<String>) -> Self {
+        let builder = Config::builder()
             // Config file `~/.config/maconomy-cli/config.toml`
-            .add_source(config::File::with_name(&config_path).required(false))
+            .add_source(config::File::with_name(DEFAULT_PATH).required(false))
             // Or `./config.toml`
             .add_source(config::File::with_name("config").required(false))
             // Add in settings from environment variables (with a prefix of `MACONOMY__`)
@@ -21,11 +19,18 @@ impl Configuration {
             // E.g. `MACONOMY__AUTHENTICATION__SSO__COOKIE_PATH=foo/bar/cookie ./target/maconomy`
             // runs with `authentication.sso.cookie_path` set to `foo/bar/cookie` (notice how the
             // `.`s are replaced with double underscores)
-            .add_source(config::Environment::with_prefix("MACONOMY").separator("__"))
-            .build()
-            .expect("Failed to read configuration");
+            .add_source(config::Environment::with_prefix("MACONOMY").separator("__"));
 
-        Self(config)
+        let builder = match config_str {
+            Some(config_str) => {
+                // Literal config passed in through stdin
+                let source = config::File::from_str(&config_str, config::FileFormat::Toml);
+                builder.add_source(source)
+            }
+            None => builder,
+        };
+
+        Self(builder.build().expect("Failed to read configuration"))
     }
 
     pub fn get_value<'a, T: Deserialize<'a>>(&self, value_name: &str) -> Result<T> {

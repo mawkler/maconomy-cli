@@ -26,7 +26,7 @@ async fn send_with_cookie(
 }
 
 impl HttpService<'_> {
-    pub(crate) fn new(auth_service: &AuthService) -> HttpService {
+    pub(crate) fn new(auth_service: &AuthService) -> HttpService<'_> {
         HttpService { auth_service }
     }
 
