@@ -146,7 +146,6 @@ pub enum Command {
     \n  maconomy line delete 2 \
     ")
 )]
-
 pub struct Args {
     /// TOML formatted configuration content
     #[arg(short, long, value_name = "configuration")]

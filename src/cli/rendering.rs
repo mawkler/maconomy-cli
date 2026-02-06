@@ -12,29 +12,29 @@ pub(crate) struct Row<'a> {
     #[tabled(rename = "Task name")]
     pub(crate) task_name: &'a str,
     #[tabled(rename = "Mon")]
-    #[tabled(display_with = "display_hours")]
+    #[tabled(display = "display_hours")]
     pub(crate) monday: f32,
     #[tabled(rename = "Tue")]
-    #[tabled(display_with = "display_hours")]
+    #[tabled(display = "display_hours")]
     pub(crate) tuesday: f32,
     #[tabled(rename = "Wed")]
-    #[tabled(display_with = "display_hours")]
+    #[tabled(display = "display_hours")]
     pub(crate) wednesday: f32,
     #[tabled(rename = "Thu")]
-    #[tabled(display_with = "display_hours")]
+    #[tabled(display = "display_hours")]
     pub(crate) thursday: f32,
     #[tabled(rename = "Fri")]
-    #[tabled(display_with = "display_hours")]
+    #[tabled(display = "display_hours")]
     pub(crate) friday: f32,
     #[tabled(rename = "Sat")]
-    #[tabled(display_with = "display_hours")]
+    #[tabled(display = "display_hours")]
     pub(crate) saturday: f32,
     #[tabled(rename = "Sun")]
-    #[tabled(display_with = "display_hours")]
+    #[tabled(display = "display_hours")]
     pub(crate) sunday: f32,
 }
 
-fn display_hours(hours: &f32) -> impl Display {
+fn display_hours(hours: &f32) -> String {
     if let 0.0 = hours {
         return "".to_string();
     }

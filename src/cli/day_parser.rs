@@ -7,7 +7,7 @@ use nom::{
     combinator::{map, map_res},
     multi::separated_list0,
     sequence::{delimited, separated_pair},
-    Finish, IResult,
+    Finish, IResult, Parser,
 };
 
 type Range = (Day, Day);
@@ -66,12 +66,13 @@ fn day_prefix(input: &str) -> IResult<&str, Day> {
             .find(|&day| day.starts_with(prefix))
             .map(|&d| d.parse().expect("Day validity has already been checked"))
             .ok_or("No matching day")
-    })(input)
+    })
+    .parse(input)
 }
 
 fn day_range(input: &str) -> IResult<&str, Range> {
     let hyphen = delimited(space0, tag("-"), space0);
-    separated_pair(day_prefix, hyphen, day_prefix)(input)
+    separated_pair(day_prefix, hyphen, day_prefix).parse(input)
 }
 
 fn parse_items(input: &str) -> IResult<&str, Vec<Item>> {
@@ -80,7 +81,7 @@ fn parse_items(input: &str) -> IResult<&str, Vec<Item>> {
     let comma = delimited(space0, tag(","), space0);
     let separator = alt((comma, space1));
 
-    separated_list0(separator, alt((range, day)))(input)
+    separated_list0(separator, alt((range, day))).parse(input)
 }
 
 fn days_in_range((start, end): Range) -> Option<Vec<Day>> {
