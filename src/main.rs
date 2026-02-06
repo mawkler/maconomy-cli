@@ -1,5 +1,6 @@
 use anyhow::Context;
-use cli::arguments::{parse_arguments, Command, Line};
+use clap::Parser;
+use cli::arguments::{Command, Line};
 use cli::commands::CommandClient;
 use config::Configuration;
 use domain::time_sheet_service::TimeSheetService;
@@ -8,6 +9,8 @@ use infrastructure::repositories::time_sheet_repository::TimeSheetRepository;
 use infrastructure::{auth_service::AuthService, http_service::HttpService};
 use std::rc::Rc;
 use tokio::sync::Mutex;
+
+use crate::cli::arguments::Args;
 
 mod cli;
 mod config;
@@ -19,7 +22,9 @@ mod utils;
 async fn main() -> anyhow::Result<()> {
     env_logger::init(); // Enable logging
 
-    let config = Configuration::new();
+    let cli_arguments = Args::parse();
+
+    let config = Configuration::new(cli_arguments.config);
     let url = config.get_value("maconomy_url")?;
     let company_name = config.get_value("company_id")?;
 
@@ -44,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         &auth_service,
     );
 
-    match parse_arguments() {
+    match cli_arguments.command {
         Command::Get { week, format } => command_client.get(week, format).await,
         Command::Set { hours, task, days } => command_client.set(hours, &days, &task).await,
         Command::Clear { task, days } => command_client.clear(&task, &days).await,

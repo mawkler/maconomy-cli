@@ -146,11 +146,12 @@ pub enum Command {
     \n  maconomy line delete 2 \
     ")
 )]
+
 pub struct Args {
+    /// Path to a configuration file
+    #[arg(short, long, value_name = "FILE")]
+    pub config: Option<String>,
+
     #[command(subcommand)]
     pub command: Command,
-}
-
-pub fn parse_arguments() -> Command {
-    Args::parse().command
 }

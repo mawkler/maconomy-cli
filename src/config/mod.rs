@@ -2,13 +2,15 @@ use anyhow::{anyhow, Context, Result};
 use config::Config;
 use serde::Deserialize;
 
-pub struct Configuration {
-    config: Config,
-}
+const DEFAULT_PATH: &str = "~/.config/maconomy-cli/config";
+
+#[derive(Debug)]
+pub struct Configuration(Config);
 
 impl Configuration {
-    pub fn new() -> Self {
-        let config_path = shellexpand::tilde("~/.config/maconomy-cli/config").to_string();
+    pub fn new(path: Option<String>) -> Self {
+        let config_path = path.unwrap_or_else(|| shellexpand::tilde(DEFAULT_PATH).to_string());
+        dbg!(&config_path);
         let config = Config::builder()
             // Config file `~/.config/maconomy-cli/config.toml`
             .add_source(config::File::with_name(&config_path).required(false))
@@ -23,7 +25,7 @@ impl Configuration {
             .build()
             .expect("Failed to read configuration");
 
-        Self { config }
+        Self(config)
     }
 
     pub fn get_value<'a, T: Deserialize<'a>>(&self, value_name: &str) -> Result<T> {
@@ -31,7 +33,7 @@ impl Configuration {
             "Configuration value `{value_name}` is missing. Please set it in ./config.toml or \
                 ~/.config/maconomy-cli/config.toml"
         );
-        let value = self.config.get(value_name).context(error)?;
+        let value = self.0.get(value_name).context(error)?;
         Ok(value)
     }
 
@@ -39,7 +41,7 @@ impl Configuration {
         &self,
         value_name: &str,
     ) -> Result<Option<T>> {
-        let value = self.config.get(value_name);
+        let value = self.0.get(value_name);
         match value {
             Ok(value) => Ok(Some(value)),
             Err(config::ConfigError::NotFound(_)) => Ok(None),
