@@ -30,6 +30,7 @@
             pre-commit
             rustPackages.clippy
             cargo-insta
+            cargo-audit
 
             # Other
             openssl
